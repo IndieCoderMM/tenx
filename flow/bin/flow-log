@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Append one row to a task's logs.tsv.
+
+Usage:
+    flow-log <plans-dir>/<slug> <kind> <summary> [--phase N] [--ref TEXT]
+
+Kinds (closed set):
+    decision   a choice was made and is now in force
+    reversed   a previous decision or approach was abandoned
+    blocked    work stopped pending something external
+    unblocked  that something arrived
+    done       a phase completed
+    note       anything else worth resuming from
+"""
+
+import argparse
+import datetime as dt
+import pathlib
+import sys
+
+KINDS = ("decision", "reversed", "blocked", "unblocked", "done", "note")
+COLUMNS = ("ts", "kind", "phase", "summary", "ref")
+MAX_SUMMARY = 120
+
+
+def clean(value):
+    """Flatten anything that would break the row or column structure."""
+    if value is None:
+        return ""
+    text = str(value)
+    for bad in ("\t", "\n", "\r", "\v", "\f"):
+        text = text.replace(bad, " ")
+    return " ".join(text.split())
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("folder", help="task folder, e.g. ~/.flow/plans/chat/4923-storyboard")
+    parser.add_argument("kind", choices=KINDS)
+    parser.add_argument("summary", help="one line, no tabs; truncated at %d chars" % MAX_SUMMARY)
+    parser.add_argument("--phase", default="", help="phase number this row belongs to")
+    parser.add_argument("--ref", default="", help="commit sha, issue url, or file path")
+    args = parser.parse_args()
+
+    folder = pathlib.Path(args.folder).expanduser()
+    if not folder.is_dir():
+        sys.exit("no such task folder: %s" % folder)
+
+    summary = clean(args.summary)
+    if not summary:
+        sys.exit("summary is empty after cleaning")
+    if len(summary) > MAX_SUMMARY:
+        summary = summary[: MAX_SUMMARY - 1].rstrip() + "…"
+
+    row = (
+        dt.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%z"),
+        args.kind,
+        clean(args.phase),
+        summary,
+        clean(args.ref),
+    )
+
+    path = folder / "logs.tsv"
+    fresh = not path.exists() or path.stat().st_size == 0
+    with path.open("a", encoding="utf-8") as handle:
+        if fresh:
+            handle.write("\t".join(COLUMNS) + "\n")
+        handle.write("\t".join(row) + "\n")
+
+    print("\t".join(row))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "dispatch",
+  "version": "0.1.0",
+  "displayName": "Dispatch",
+  "description": "Everything you publish for someone else to read — commits, pull requests, issues, and issue progress dashboards. Drafted in chat, posted only on approval.",
+  "author": { "name": "Hein Thant" }
+}

@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Print active flow tasks, open PRs, and assigned issues as aligned columns.
+
+Usage:
+    dispatch-monitor [--repo NAME] [--no-remote] [--days N]
+"""
+
+import argparse
+import json
+import os
+import pathlib
+import re
+import subprocess
+import time
+
+SOURCES = (
+    (pathlib.Path.home() / ".flow" / "plans", "*/*", "stage", True),
+    (pathlib.Path.home() / ".crewmate", "*/quests/*", "status", False),
+)
+DEAD_STAGES = ("shipped", "archived")
+STALE_DAYS = 7
+
+
+def run(cmd, timeout=20):
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return out.stdout if out.returncode == 0 else None
+
+
+def age(seconds):
+    delta = max(0, time.time() - seconds)
+    for cutoff, div, unit in ((3600, 60, "m"), (86400, 3600, "h"), (86400 * 999, 86400, "d")):
+        if delta < cutoff:
+            return "%d%s" % (delta // div, unit)
+    return "old"
+
+
+def field(text, key):
+    m = re.search(r"^%s:[ \t]*(\S.*)$" % re.escape(key), text, re.M)
+    if not m:
+        return ""
+    value = m.group(1).strip()
+    return "" if value in ("-", "—") else value
+
+
+def short_ref(url):
+    if not url:
+        return "-"
+    m = re.search(r"/(?:issues|pull)/(\d+)", url) or re.search(r"([A-Z]+-\d+)", url)
+    return "#" + m.group(1) if m and m.group(1).isdigit() else (m.group(1) if m else url)
+
+
+def read_tasks(only_repo):
+    rows = []
+    for root, pattern, stage_key, kind_log in SOURCES:
+        if not root.is_dir():
+            continue
+        for folder in sorted(root.glob(pattern)):
+            if not folder.is_dir():
+                continue
+            repo = folder.parts[len(root.parts)]
+            if only_repo and repo != only_repo:
+                continue
+            contract = folder / "contract.md"
+            text = contract.read_text(errors="replace") if contract.is_file() else ""
+            stage = field(text, stage_key) or "?"
+            if stage in DEAD_STAGES:
+                continue
+
+            phase, total, nxt = "-", 0, ""
+            tasks = folder / "tasks.md"
+            body = tasks.read_text(errors="replace") if tasks.is_file() else ""
+            if body:
+                current = ""
+                for line in body.splitlines():
+                    head = re.match(r"^##\s+(Phase|Iteration)\s+(\S+)", line)
+                    if head:
+                        current = ("P" if head.group(1) == "Phase" else "I") + head.group(2).rstrip("—-— ")
+                        total += 1
+                        continue
+                    box = re.match(r"^\s*-\s*\[( |x|X)\]\s*(\S+)?\s*(.*)$", line)
+                    if box:
+                        if box.group(1) == " " and not nxt:
+                            phase = current or "-"
+                            nxt = " ".join(x for x in (box.group(2), box.group(3)) if x).strip()
+
+            open_items = len(re.findall(r"^\s*-\s*\[ \]", body, re.M))
+
+            blocked = ""
+            log = folder / "logs.tsv"
+            if log.is_file():
+                lines = [l for l in log.read_text(errors="replace").splitlines()[1:] if l.strip()]
+                if lines:
+                    cols = lines[-1].split("\t")
+                    if kind_log and len(cols) > 3 and cols[1] == "blocked":
+                        blocked = cols[3]
+
+            rows.append({
+                "name": "%s/%s" % (repo, folder.name),
+                "stage": stage,
+                "phase": phase if phase == "-" else "%s/%d" % (phase, total),
+                "open": "clean" if open_items == 0 else "%d open" % open_items,
+                "age": age(folder.stat().st_mtime),
+                "stale": (time.time() - folder.stat().st_mtime) > STALE_DAYS * 86400,
+                "ref": short_ref(field(text, "tracker")),
+                "pr": short_ref(field(text, "pr")),
+                "next": nxt,
+                "blocked": blocked,
+            })
+    rows.sort(key=lambda r: r["name"])
+    return rows
+
+
+def stamp_secs(text):
+    try:
+        clean = text.replace("Z", "").split(".")[0]
+        return time.mktime(time.strptime(clean, "%Y-%m-%dT%H:%M:%S")) - time.timezone
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def active_repos(rows):
+    repos = {r["name"].split("/")[0] for r in rows}
+    url = run(["git", "remote", "get-url", "origin"], timeout=5)
+    if url:
+        name = url.strip().rstrip("/").split("/")[-1]
+        repos.add(name[:-4] if name.endswith(".git") else name)
+    return repos
+
+
+def search(kind, selector, cutoff_days, keep_repos):
+    fields = "number,title,repository,updatedAt"
+    if kind == "prs":
+        fields += ",isDraft"
+    raw = run(["gh", "search", kind, selector, "--state=open", "--limit", "50",
+               "--json", fields], timeout=40)
+    if raw is None:
+        return None, 0, 0
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None, 0, 0
+    out, stale, offtopic = [], 0, 0
+    for item in data:
+        secs = stamp_secs(item.get("updatedAt", ""))
+        repo = (item.get("repository") or {}).get("name", "?")
+        if cutoff_days and (time.time() - secs) > cutoff_days * 86400:
+            stale += 1
+            continue
+        if keep_repos and repo not in keep_repos:
+            offtopic += 1
+            continue
+        out.append({
+            "num": "%s#%s" % (repo, item["number"]),
+            "title": item.get("title", ""),
+            "note": "draft" if item.get("isDraft") else "",
+            "age": age(secs) if secs else "?",
+            "secs": secs,
+        })
+    out.sort(key=lambda r: -r["secs"])
+    return out, stale, offtopic
+
+
+def pad(text, width):
+    text = text or ""
+    return text if len(text) >= width else text + " " * (width - len(text))
+
+
+def clip(text, width):
+    text = " ".join((text or "").split())
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def print_tasks(rows):
+    if not rows:
+        return
+    print("TASKS")
+    w = max(len(r["name"]) for r in rows)
+    ws = max(len(r["stage"]) for r in rows)
+    for r in rows:
+        line = "%s  %s  %s  %s  %s" % (
+            pad(r["name"], w), pad(r["stage"], ws), pad(r["phase"], 6),
+            pad(r["open"], 7), pad(r["age"], 3))
+        for label in (r["ref"], r["pr"]):
+            if label and label != "-":
+                line += " " + label
+        if r["stale"]:
+            line += "  stale"
+        print(line)
+        if r["blocked"]:
+            print("  blocked  %s" % clip(r["blocked"], 68))
+        elif r["next"]:
+            print("  next     %s" % clip(r["next"], 68))
+    print()
+
+
+def print_remote(head, rows, stale=0, offtopic=0):
+    if rows is None:
+        print("%s\n  gh unavailable\n" % head)
+        return
+    if not rows:
+        return
+    print(head)
+    w = max(len(r["num"]) for r in rows)
+    for r in rows:
+        line = "%s  %s  %s" % (pad(r["num"], w), pad(clip(r["title"], 46), 46), pad(r["age"], 3))
+        if r["note"]:
+            line += "  " + r["note"]
+        print(line.rstrip())
+    if stale:
+        print("  %d older than the window, hidden" % stale)
+    if offtopic:
+        print("  %d in repos with no active task, hidden — rerun with --all" % offtopic)
+    print()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo", help="limit tasks to this repo folder")
+    parser.add_argument("--no-remote", action="store_true", help="skip gh, tasks only")
+    parser.add_argument("--days", type=int, default=30,
+                        help="hide PRs and issues untouched this long; 0 shows all")
+    parser.add_argument("--all", action="store_true",
+                        help="keep PRs and issues from repos with no active task")
+    args = parser.parse_args()
+
+    tasks = read_tasks(args.repo)
+    keep = set() if args.all else active_repos(tasks)
+    empty = ([], 0, 0)
+    prs = empty if args.no_remote else search("prs", "--author=@me", args.days, keep)
+    issues = empty if args.no_remote else search("issues", "--assignee=@me", args.days, keep)
+
+    print_tasks(tasks)
+    print_remote("PRS", *prs)
+    print_remote("ISSUES", *issues)
+
+    if not tasks and not prs and not issues:
+        print("Nothing active.")
+
+
+if __name__ == "__main__":
+    main()
