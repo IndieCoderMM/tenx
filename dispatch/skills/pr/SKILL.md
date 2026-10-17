@@ -80,21 +80,23 @@ refactor(db): extract query builder from repo layer
 
 ## Step 4: Write the body
 
-Sections in this order: description, Context, Changes, How to Test, then Notes when there is something to note.
+Sections in this order: description, Problems, Related Ticket, Changes, How to Test, Notes. Problems, Related Ticket, and Notes are left out unless their rule below says to include them.
 
 ### Description (no heading)
 
-Open with a short paragraph, two or three sentences, saying what this PR does. Written so anyone on the team understands the change without opening the diff.
+One line, starting with "This PR" and an action verb: `This PR adds a login form.` Name the point of the change, not the supporting work. No second sentence.
 
-### `## Context`
+### `## Problems`
 
-Bullets, one sentence each, one per reason this change exists, in present tense. A reason is either a bug (what goes wrong today and who it affects) or a need (what was missing, what it blocked, what someone asked for).
+Leave this section out by default. Include it only when the user gives the problems, or when the PR replaces existing behaviour and the description alone does not say what was wrong with it. Then write two or three bullets, one short sentence each, one per problem. Do not restate the description.
 
-End the section with a separate bullet list of related issues and tickets, when the branch name, commits, or user's message name any:
+### `## Related Ticket`
+
+Only when the branch name, commits, or user's message name a ticket or issue. Linear ticket as `[ID](link)`, GitHub issue as `#id`. Omit the section when there are none.
 
 ```markdown
+- Closes [BIL-119](https://linear.app/team/issue/BIL-119)
 - Closes #482
-- Ticket: https://tracker.example.com/BIL-119
 ```
 
 ### `## Changes`
@@ -133,11 +135,11 @@ Put anything small and incidental to the main change under a final **Minor fixes
 
 ### `## How to Test`
 
-A checkbox list a reviewer follows in the running app, without reading the diff. Start from a clean state, give the exact route, screen, or button per step, and say the result to expect. Cover only the manual path through the app: never list test commands or automated checks. When the change has no manual surface, say which part of the app to exercise to see it, or state that there is no manual surface.
+A short checkbox list of the general cases a reviewer tries in the running app, one short sentence each. Name the case and what should happen, not every click on the way there. Give a route only when the reviewer cannot find the screen without it. Cover only the manual path through the app: never list test commands or automated checks. When the change has no manual surface, say which part of the app to exercise to see it, or state that there is no manual surface.
 
 ### `## Notes`
 
-Add this section when the reviewer needs to know something the diff does not show, one sentence per bullet: known gaps left in place, a follow-up PR already planned, steps to run before or after merge (migration, flag flip, config change), or a part of the change that deserves closer review.
+Only for steps someone must run before or after merge: a migration, a script, a flag flip, a config or env change. One bullet per step. Leave the section out when there are none. Known gaps, planned follow-ups, and parts worth a closer look do not go here.
 
 ### Punctuation
 
@@ -152,51 +154,45 @@ Write each paragraph and each bullet as one unbroken line, however long it runs.
 ### Full example
 
 ```markdown
-Credits now read as one line per video release instead of one line per internal grant bucket, and the billing meter matches the numbers in threshold emails. Plans can also be sold with a fixed term.
+This PR simplifies the billing statement and adds fixed-term plans.
 
-## Context
+## Related Ticket
 
-- The running balance appears to move backwards, because one charge can split into several statement rows.
-- The usage meter and the alert email compute the same percentage from different totals, so the page can contradict the email it triggered.
-- Sales cannot offer fixed-term plans, because nothing ends a plan on a set date.
-
+- Closes [BIL-119](https://linear.app/acme/issue/BIL-119)
 - Closes #482
-- Ticket: https://tracker.example.com/BIL-119
 
 ## Changes
 
 **Billing statement**
 
-- One statement line per video release instead of one per grant bucket.
-- Usage percentage now matches the figure in threshold emails.
+- One statement line per video release.
+- Usage percentage matches the threshold emails.
 
 **Plan terms**
 
 - Plans can be sold with a fixed term in months.
-- Pilot access is a plan tier rather than a global build flag.
-- Internal margin prices each plan span at the rate in force then.
+- Pilot access is a plan tier, not a build flag.
 
 **Minor fixes**
 
-- Invoice date no longer shifts a day for workspaces west of UTC.
-- Removed the unused pilot card and stale comments.
+- Invoice date no longer shifts a day west of UTC.
+- Unused pilot card is removed.
 
 ## How to Test
 
-- [ ] Open `/app/billing` on a workspace that released three videos in one charge, and confirm the statement shows one line per release.
-- [ ] Compare the usage percentage on that page against the last threshold email, and confirm they match.
-- [ ] Provision a plan with a 12 month term, then confirm the end date shown to the customer falls on a billing boundary.
-- [ ] Try to provision a pilot with no term, and confirm the server refuses it.
+- [ ] Release three videos in one charge. The statement shows three lines.
+- [ ] The usage percentage matches the last threshold email.
+- [ ] A 12 month plan ends on a billing boundary.
+- [ ] A pilot with no term is refused.
 
 ## Notes
 
 - Flip `billing_terms` on for the pilot workspaces after deploy.
-- Statement export still shows one row per grant bucket, with a follow-up PR planned.
 ```
 
 ### Tone
 
-Plain words, direct voice, present tense. Start sentences with the fact. Name breaking changes, migrations, feature flags, and dependency bumps openly, since those are what reviewers most need to catch.
+Plain words, direct voice, present tense. Start sentences with the fact. One idea per sentence: when a sentence runs on, split it or drop the tail that explains how or why. Write less than feels complete; the reviewer has the diff for the rest. Name breaking changes, migrations, feature flags, and dependency bumps openly, since those are what reviewers most need to catch.
 
 ## Step 5: Present draft ⛔ BLOCKING
 
@@ -208,10 +204,11 @@ Print the title and body in chat as one fenced block, then stop and wait for app
 
 ```bash
 git push -u origin HEAD
-gh pr create --title "<title>" --body-file <path> --base <base>   # new
+gh pr create --title "<title>" --body-file <path> --base <base> --assignee @me   # new
 gh pr edit <n> --title "<title>" --body-file <path>               # update
 ```
 
+- Open a ready PR, not a draft, assigned to the user.
 - Write the body file into the scratchpad directory.
 - Ask first when the working tree has uncommitted changes.
 - Report the PR URL.
@@ -220,14 +217,15 @@ gh pr edit <n> --title "<title>" --body-file <path>               # update
 
 - [ ] Title is `type(scope): summary`, imperative, lowercase, near 50 characters
 - [ ] Title type matches the point of the change
-- [ ] Opening paragraph makes sense to someone who has not read the diff
-- [ ] Context gives the bug or the need behind the change, with related issues and tickets as their own bullets
-- [ ] How to Test walks the app only, with no test commands or automated checks
+- [ ] Description is one line starting with "This PR" and an action verb
+- [ ] Problems is left out unless the user gave the problems or the reason for replacing existing behaviour is not obvious
+- [ ] Related Ticket links Linear tickets as `[ID](link)` and issues as `#id`, or is omitted when there are none
+- [ ] How to Test lists general cases in the app, one short sentence each, with no click-by-click steps, test commands, or automated checks
 - [ ] No em dashes or en dashes anywhere, and no generated-by or co-authored-by footer
 - [ ] Every bullet in every section is a single sentence on a single unbroken line
 - [ ] Changes has five bullets or fewer, each one short sentence in product language, with no file, symbol, or component names and no reasoning unless it is needed
 - [ ] Incidental work (side bug fixes, tidy-ups, bumps) sits under **Minor fixes**, not among the main bullets
-- [ ] Notes carries anything the reviewer must do or watch that the diff does not show
+- [ ] Notes holds only steps to run before or after merge, or is left out
 - [ ] Every statement traces to a real hunk in the diff
 - [ ] Breaking changes, migrations, and flags are stated
 - [ ] Body reads in one pass, with no placeholder text left

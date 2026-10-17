@@ -1,10 +1,9 @@
-Short paragraph on what this PR does.
+This PR <verb> <what>.
 
-## Context
+## Related Ticket
 
--
-
-- Closes #
+- Closes [TICKET-ID](link)
+- Closes #issueId
 
 ## Changes
 
@@ -13,7 +12,3 @@ Short paragraph on what this PR does.
 ## How to Test
 
 - [ ]
-
-## Notes
-
--
