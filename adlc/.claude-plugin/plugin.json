@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "adlc",
+  "version": "0.1.0",
+  "displayName": "ADLC",
+  "description": "Approval-gated feature development from discovery through verified delivery, using persistent project artifacts.",
+  "author": { "name": "Hein Thant" }
+}

@@ -1,129 +1,128 @@
 ---
 name: monitor
-description: Overview of active work — flow tasks, open PRs, assigned issues, and what to do next, printed in chat. Use when asked what is active, what to work on, to plan the day, for status or progress, where things were left off, or for the PRs and issues related to the current work.
+description: Triage everything assigned to you — open Linear and GitHub issues, their PRs, what is newly assigned, and what has gone stale. One batched scan, reported in seconds; details on any one item only when you ask. Use when asked what to work on, what is assigned, for status or progress, to plan the day, or to check open PRs and issues.
 ---
 
 # Monitor
 
-Read the state of active work and print it. Then route to the skill that acts on it.
+Two passes. The **scan** is one batch of list queries and a report — it is what
+runs by default. The **drill** looks one item up close, and runs only when the
+user asks for that item.
 
-Read-only by itself. Every change goes through another skill, named at the end.
+Read-only. Every change goes through another skill, named at the end.
 
-## Scope
+## 1. Scan
 
-**Wide** — no argument, or asked to plan the day, or the session has no work in
-it yet. Every flow task across every repo, plus your open PRs and assigned
-issues.
-
-**Focused** — a slug, repo, issue, or PR given, or this session already has work
-in flight. That task only: its tracker, its PR, its next item.
-
-When in doubt, run wide. A wide overview answers a focused question too.
-
-## Gather
+Five list queries, all in a single batch. They do not depend on each other, so
+they go out together and nothing waits on anything.
 
 ```bash
-dispatch-monitor              # everything, 30-day window on PRs and issues
-dispatch-monitor --repo <r>   # one repo's tasks
-dispatch-monitor --no-remote  # tasks only, no gh
-dispatch-monitor --days 0     # include everything, however old
-dispatch-monitor --all        # keep repos that have no active task
+gh search issues --assignee=@me --state=open --limit 50 \
+  --json number,title,repository,url,labels,createdAt,updatedAt
+gh search prs --author=@me --state=open --limit 50 \
+  --json number,title,repository,url,isDraft,body,createdAt,updatedAt
 ```
 
-It reads the task folders, then `gh search prs --author=@me` and
-`gh search issues --assignee=@me`. Those work outside a git repo, so a wide
-overview runs from anywhere. `gh unavailable` under a heading means the query
-failed, not that nothing is open.
+Linear, in the same batch — `mcp__plugin_linear_linear__list_issues` with
+`assignee: "me"`, `limit: 50`,
+`fields: ["title", "status", "priority", "url", "gitBranchName", "createdAt", "updatedAt", "team"]`,
+and `state` set to `started`, `unstarted`, and `backlog` in turn.
 
-PRs and issues in repos with no active task are counted, not listed. When the
-question is about one of those, rerun with `--all`.
+`state` takes one status type, so scope the calls rather than filtering after the
+fact. An unfiltered `list_issues` sorts by `updatedAt` and caps at 50, which on a
+live workspace is mostly `Done` rows with open work truncated past the cursor —
+the three scoped calls together return less and miss nothing. Each one also feeds
+exactly one report table below.
 
-Print the `TASKS`, `PRS`, and `ISSUES` blocks in a fenced block, rows exactly as
-the script emitted them. Do not reformat, re-sort, or re-align — fixed columns
-are the point, and retyping invites invented rows.
+**This batch is the whole scan.** No `gh pr view`, no `gh pr checks`, no
+`gh issue view`, no `get_issue`, no `git` — those are the drill, and a scan that
+fans out into them takes minutes instead of seconds. Report what these five
+queries returned and stop.
 
-Drop the trailing `N older than the window, hidden` and `N in repos with no
-active task, hidden` lines. Those are addressed to you, not the user: they say a
-rerun with `--days 0` or `--all` would show more. Rerun when the question needs
-it; keep the counts out of the report.
+The `gh search` queries run outside a git repo, so this works from anywhere. A
+source that fails is named in the report — `Linear unavailable`,
+`GitHub unavailable` — never dropped silently, never backfilled with guesses.
 
-The script is the baseline, not the ceiling. It answers what is open; anything
-the question needs beyond that, go fetch — `gh pr view` for review and merge
-state, `gh pr checks` for CI, `git log`/`git status` for the branch, the Linear
-tools for one issue. Run what the question needs and no more.
+## 2. Pair issues with PRs
 
-Then add what the script did not cover — at most four bullets, one line each,
-each naming where it came from:
+From the payload already in hand — no lookups.
 
-- In the current repo, `git status --short` and whether the branch has commits
-  the remote does not.
-- For a task in focus, the tracker's own state via `gh issue view` or the Linear
-  tools for that one issue. Never list, search, or browse a tracker for a
-  plausible match. A close-looking title is not identification.
-- Anything this session did that the folders do not show yet.
+- PR → GitHub issue: closing keywords in the PR `body` (`closes #12`, `fixes org/repo#12`).
+- PR → Linear issue: a `linear.app/…/issue/…` url or a bare identifier (`CC-187`) in the PR body, or the PR's head branch matched against `gitBranchName`.
 
-A row missing from TASKS means there is no task folder for it. Say that, and
-stop — do not go hunting other directories for a plausible substitute.
-
-## Assigned
-
-Wide scope only. The script answers what is open. It does not answer what landed
-on you and has not been picked up — it has no Linear access, so a Linear-only
-issue never reaches `ISSUES` at all. Build that section yourself.
-
-`mcp__plugin_linear_linear__list_issues` with `assignee: "me"` and `state` for
-Linear's own unstarted types — `unstarted` (Todo) and `backlog`. Request
-`fields: ["title", "status", "priority", "createdAt", "updatedAt", "url", "description"]`;
-`id` always comes back.
-
-Then cut anything already in flight. Keep an issue only when it has no `TASKS`
-row pointing at it and no `PRS` row for it. A GitHub row from `ISSUES` that
-clears the same bar and has no Linear counterpart belongs here too.
-
-One issue is one row. A Linear issue tracking a GitHub issue prints joined —
-`CC-187 / crewclip#267` — never as two rows. The pairing comes from the Linear
-issue's `url`, `description`, or attachments. A close-looking title is not
+An issue and its PR are one row. A Linear issue that tracks a GitHub issue prints
+joined — `CC-187 / crewclip#267` — never as two rows. The pairing must come from
+a url, a body reference, or a branch name. A close-looking title is not
 identification; leave them separate when nothing links them.
 
-A markdown table, columns: issue, status, priority, created, last touched.
-Highest priority first, then most recently touched. Collapse `backlog` rows into
-one trailing row naming them, dashes for the dates — they are not next.
+An unpaired PR still prints, in its own row under **In progress**.
 
-Omit the section when nothing survives the cut. If the Linear tools fail, say
-`Linear unavailable` under the heading rather than dropping it silently.
+## 3. Report
 
-## Next
+Three tables, each issue in exactly one, most recently touched first. The issue
+cell is the tracker identifier (`CC-187`, `tenx#14`) linked to its url. Skip a
+table with no rows.
 
-Two or three suggestions, most useful first, each traceable to something printed
-above. No suggestion without a reason.
+**In progress** — started, and something moved within 7 days. Columns: issue,
+title, pr, touched.
 
-Every entry is an action to take. Never spend one ruling a route out, and never
-append an extra observation after the list.
+**Stale** — started but untouched for 7 days or more. Same columns plus a `why`
+cell naming what went quiet and for how long.
+
+**New** — not started, no PR. Columns: issue, title, priority, created, source.
+Highest priority first, then newest — Linear `priority` is an object, so read
+`.name` and order `Urgent`, `High`, `Medium`, `Low`, `No priority`; the raw
+`value` sorts wrong because `0` means none, not top. Collapse Linear `backlog`
+rows into one trailing row that names them — they are not next.
+
+The `pr` cell holds what the list query knows and nothing more: the number,
+`draft` when `isDraft`, and its age. **Review and CI state are not in this
+pass** — leave the cell at that rather than guessing, and never write `ci green`,
+`approved`, or `conflicts` here.
+
+## 4. Hand back
+
+Close with at most three candidates worth a closer look, one line each, ranked by
+what the scan can actually see: a PR that has sat longest, the oldest stale
+issue, the highest-priority unstarted one. Say which drill each would trigger.
+
+Then stop and let the user pick. Do not drill on your own initiative, and do not
+pre-fetch one item's details because it looks like the obvious pick.
+
+## 5. Drill
+
+On request, for the named item only.
+
+| Asked about | Run |
+|---|---|
+| A PR's review and CI state | `gh pr view <n> -R <repo> --json isDraft,reviewDecision,mergeStateStatus,statusCheckRollup` |
+| Why CI is red | `gh pr checks <n> -R <repo>` |
+| A GitHub issue's PRs, when the body gave nothing | `gh issue view <n> -R <repo> --json closedByPullRequestsReferences` |
+| A Linear issue in full | `mcp__plugin_linear_linear__get_issue` — attachments carry the PR links |
+| Whether local work is pushed | `git status --short`, `git log @{u}..` |
+
+Collapse a PR's state to one label, worst first: `ci red`, `conflicts`,
+`changes requested`, `ci pending`, `draft`, `ready`.
+
+Then route:
 
 | State | Route to |
 |---|---|
-| Open items in the current phase | `/flow:execute <slug>` |
-| Phase items all done, uncommitted work | `/flow:checkpoint <slug>` |
-| Commits since the last checkpoint, no review yet | `/flow:review <slug>` |
-| All phases accepted | `/flow:validate <slug>` |
-| Done-when ticked, no PR | `/flow:ship <slug>` |
-| Branch moved on since the PR body was written | `dispatch:pr <url>` |
-| Tracker stale against real progress | `dispatch:issue <url>` |
-| Staged work sitting uncommitted | `dispatch:commit` |
-| Task blocked in the log | `craft:recover` |
-| Newest log row is days old and the branch has moved | `/flow:reconcile <slug>` |
-| Work in flight with no task folder | `/flow:brainstorm` |
-| Assigned, not started, worth starting now | `/flow:brainstorm <issue>` |
+| PR `ready` | merge it — `gh pr merge`, confirm first |
+| PR `ci red`, `conflicts`, or `changes requested` | fix the branch, then `dispatch:commit` |
+| PR `draft` with the work done | `dispatch:pr <url>` to finish the body and mark ready |
+| Branch pushed, no PR | `dispatch:pr` |
+| Tracker behind the code | `dispatch:issue <url>` |
+| Newly assigned, worth starting now | `/flow:brainstorm <issue>` |
+| Stale 14 days or more | close it or re-plan — ask which |
 
 Run one when asked. Invoking it hands over completely — that skill's own rules
 apply, including its approval gate.
 
 ## Rules
 
-- Never write a doc, a commit, a PR body, or an issue. Routing is the only action.
-- Report what the sources say. A task the log calls blocked is blocked, even when
-  the branch looks busy.
-- Every fact traces to a command that ran. Extra queries are welcome; invented
-  rows are not.
-- State disagreements rather than resolving them: log says blocked, branch has
-  new commits, say both.
+- Never write a commit, PR body, or issue here. Routing is the only action.
+- One question, one batch. Never chain a query to answer something the user has not asked yet.
+- Every fact traces to a command that ran. Extra queries are welcome once asked for; invented rows are not.
+- State disagreements rather than resolving them: tracker says Todo, a PR is open for it, print both.
+- Assignment dates are not exposed by either tracker. `created` is a proxy — label it as created, never as assigned.

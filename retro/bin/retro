@@ -1,0 +1,627 @@
+#!/usr/bin/env python3
+"""Weekly workflow retro: capture friction, measure the week, render the dashboard.
+
+Usage:
+    retro friction <text>                 append one row to ~/.tenx/retro/friction.tsv
+    retro stats [--days 7] [--end DATE]   write ~/.tenx/retro/weeks/<week>.json, print a digest
+    retro render [--week YYYY-Www]        write ~/.tenx/retro/dashboard.html from every week on disk
+
+Reads only local files: ~/.claude/history.jsonl, ~/.claude/projects/*/*.jsonl,
+~/.tenx/flow/*/*/{logs.tsv,contract.md}, and `git worktree list` for repos
+worked in during the window.
+"""
+
+import argparse
+import collections
+import datetime as dt
+import glob
+import html
+import json
+import os
+import pathlib
+import random
+import re
+import subprocess
+import sys
+
+HOME = pathlib.Path.home()
+RETRO = HOME / ".tenx" / "retro"
+WEEKS = RETRO / "weeks"
+FRICTION = RETRO / "friction.tsv"
+CLAUDE = HOME / ".claude"
+PLANS = HOME / ".tenx" / "flow"
+MAX_FRICTION = 300
+SAMPLES = 8
+
+APPROVAL = re.compile(
+    r"^(go|go ahead|go on|ok|okay|yes|yep|y|continue|proceed|approved?|lgtm|do it|sure|"
+    r"commit|commit it|commit this|commit changes|commit and push|push|retry|try again|\d{1,2})$"
+)
+CORRECTION = re.compile(
+    r"^(no\b|nope|don'?t|stop|wrong|revert|undo|not what|that'?s not|i said|why did|why are you|"
+    r"why is it|you didn'?t|it'?s still|still (not|broken|failing|wrong))",
+    re.I,
+)
+
+# Lower is better for these; the rest are activity counts with no direction.
+LOWER_IS_BETTER = {
+    "approvals_per_100", "corrections", "interrupts", "denials", "tool_errors",
+    "usage_checks", "reversal_rate", "stale_tasks", "stale_worktrees", "compactions",
+}
+LABELS = {
+    "approvals_per_100": "One-word replies / 100 prompts",
+    "corrections": "Corrections",
+    "interrupts": "Interrupted turns",
+    "denials": "Denied tool calls",
+    "tool_errors": "Tool errors",
+    "usage_checks": "/usage checks",
+    "compactions": "Compactions",
+    "reversal_rate": "Flow reversed / done",
+    "stale_tasks": "Stale flow tasks",
+    "stale_worktrees": "Stale worktrees",
+    "prompts": "Prompts",
+    "sessions": "Sessions",
+    "approvals": "One-word replies",
+    "flow_done": "Flow phases done",
+    "flow_reversed": "Flow reversals",
+    "friction": "Friction notes",
+}
+SIGNALS = [
+    "approvals_per_100", "corrections", "interrupts", "denials", "tool_errors",
+    "usage_checks", "compactions", "reversal_rate", "stale_tasks", "stale_worktrees",
+]
+ACTIVITY = ["prompts", "sessions", "flow_done", "friction"]
+
+
+def clean(value):
+    """Flatten anything that would break the row or column structure."""
+    text = "" if value is None else str(value)
+    for bad in ("\t", "\n", "\r", "\v", "\f"):
+        text = text.replace(bad, " ")
+    return " ".join(text.split())
+
+
+def now():
+    return dt.datetime.now().astimezone()
+
+
+def week_key(day):
+    year, week, _ = day.isocalendar()
+    return "%d-W%02d" % (year, week)
+
+
+def parse_iso(text):
+    try:
+        return dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return None
+
+
+def git(*args, cwd=None):
+    try:
+        out = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
+def main_checkout(path):
+    common = git("rev-parse", "--path-format=absolute", "--git-common-dir", cwd=path)
+    return str(pathlib.Path(common).parent) if common else None
+
+
+# ---------------------------------------------------------------- friction
+
+def cmd_friction(args):
+    text = clean(" ".join(args.text))
+    if not text:
+        sys.exit("friction text is empty")
+    if len(text) > MAX_FRICTION:
+        text = text[: MAX_FRICTION - 1].rstrip() + "…"
+    cwd = os.getcwd()
+    root = main_checkout(cwd)
+    repo = pathlib.Path(root).name if root else "-"
+    branch = git("branch", "--show-current", cwd=cwd) or "-"
+    row = (now().strftime("%Y-%m-%dT%H:%M:%S%z"), repo, branch, text)
+    RETRO.mkdir(parents=True, exist_ok=True)
+    fresh = not FRICTION.exists() or FRICTION.stat().st_size == 0
+    with FRICTION.open("a", encoding="utf-8") as handle:
+        if fresh:
+            handle.write("ts\trepo\tbranch\ttext\n")
+        handle.write("\t".join(row) + "\n")
+    print("\t".join(row))
+
+
+# ---------------------------------------------------------------- stats
+
+def read_history(start, end):
+    rows = []
+    path = CLAUDE / "history.jsonl"
+    if not path.exists():
+        return rows
+    for line in path.open(encoding="utf-8", errors="replace"):
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        ts = dt.datetime.fromtimestamp(entry.get("timestamp", 0) / 1000).astimezone()
+        if start <= ts < end:
+            rows.append((ts, entry.get("display", ""), entry.get("project", ""), entry.get("sessionId", "")))
+    return rows
+
+
+def user_text(message):
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text")
+    return ""
+
+
+def read_transcripts(start, end):
+    """Events from top-level session transcripts (subagent transcripts are skipped)."""
+    events = []
+    for path in glob.glob(str(CLAUDE / "projects" / "*" / "*.jsonl")):
+        if dt.datetime.fromtimestamp(os.path.getmtime(path)).astimezone() < start:
+            continue
+        tools = {}
+        last_text = ""
+        for line in open(path, encoding="utf-8", errors="replace"):
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            ts = parse_iso(entry.get("timestamp", ""))
+            message = entry.get("message") or {}
+            kind = entry.get("type")
+            if kind == "system" and "compact" in str(entry.get("subtype", "")):
+                if ts and start <= ts < end:
+                    events.append((ts, "compact", None))
+                continue
+            if kind == "assistant":
+                for c in message.get("content") or []:
+                    if not isinstance(c, dict):
+                        continue
+                    if c.get("type") == "tool_use":
+                        tools[c.get("id")] = c.get("name", "?")
+                    elif c.get("type") == "text" and c.get("text", "").strip():
+                        last_text = c["text"].strip()
+                continue
+            if kind != "user" or not ts or not (start <= ts < end) or entry.get("isMeta"):
+                continue
+            content = message.get("content")
+            if isinstance(content, list):
+                for c in content:
+                    if isinstance(c, dict) and c.get("type") == "tool_result" and c.get("is_error"):
+                        text = str(c.get("content"))
+                        tool = tools.get(c.get("tool_use_id"), "?")
+                        denied = "doesn't want to proceed" in text or "rejected" in text
+                        events.append((ts, "denied" if denied else "error", {"tool": tool, "text": text[:200]}))
+            text = user_text(message).strip()
+            if "[Request interrupted by user" in text:
+                events.append((ts, "interrupt", {"before": last_text[-240:]}))
+            elif text and not text.startswith("<") and APPROVAL.match(text.lower().rstrip(".!")):
+                events.append((ts, "approval", {"reply": text[:40], "before": last_text[-240:]}))
+    return events
+
+
+def read_flow(start, end):
+    rows, tasks = [], []
+    for log in glob.glob(str(PLANS / "*" / "*" / "logs.tsv")):
+        folder = pathlib.Path(log).parent
+        last = None
+        for line in open(log, encoding="utf-8", errors="replace"):
+            cols = line.rstrip("\n").split("\t")
+            if len(cols) < 4 or cols[0] == "ts":
+                continue
+            try:
+                ts = dt.datetime.strptime(cols[0], "%Y-%m-%dT%H:%M:%S%z")
+            except ValueError:
+                continue
+            last = max(last, ts) if last else ts
+            if start <= ts < end:
+                rows.append((ts, cols[1], "%s/%s" % (folder.parent.name, folder.name), cols[3]))
+        stage = ""
+        contract = folder / "contract.md"
+        if contract.exists():
+            match = re.search(r"^stage:\s*(\S+)", contract.read_text(errors="replace"), re.M)
+            stage = match.group(1) if match else ""
+        tasks.append({"task": "%s/%s" % (folder.parent.name, folder.name), "stage": stage,
+                      "last": last.isoformat() if last else None})
+    return rows, tasks
+
+
+def read_friction(start, end):
+    rows = []
+    if not FRICTION.exists():
+        return rows
+    for line in FRICTION.open(encoding="utf-8", errors="replace"):
+        cols = line.rstrip("\n").split("\t")
+        if len(cols) < 4 or cols[0] == "ts":
+            continue
+        try:
+            ts = dt.datetime.strptime(cols[0], "%Y-%m-%dT%H:%M:%S%z")
+        except ValueError:
+            continue
+        if start <= ts < end:
+            rows.append({"ts": cols[0], "repo": cols[1], "branch": cols[2], "text": cols[3]})
+    return rows
+
+
+def read_worktrees(projects, end):
+    out = []
+    roots = sorted({r for r in (main_checkout(p) for p in projects if os.path.isdir(p)) if r})
+    for root in roots:
+        listing = git("worktree", "list", "--porcelain", cwd=root) or ""
+        paths = [l[9:] for l in listing.splitlines() if l.startswith("worktree ")]
+        linked = [p for p in paths if p != root]
+        stale = []
+        for path in linked:
+            last = git("log", "-1", "--format=%cI", cwd=path)
+            ts = parse_iso(last) if last else None
+            if ts is None or (end - ts).days > 14:
+                stale.append(pathlib.Path(path).name)
+        out.append({"repo": pathlib.Path(root).name, "count": len(linked), "stale": stale})
+    return out
+
+
+def measure(start, end, history, events, flow_rows, tasks, friction):
+    prompts = [h for h in history if start <= h[0] < end]
+    texts = [h[1].strip() for h in prompts]
+    plain = [t for t in texts if t and not t.startswith("/")]
+    approvals = sum(1 for t in plain if APPROVAL.match(t.lower().rstrip(".!")))
+    evs = [e for e in events if start <= e[0] < end]
+    kinds = collections.Counter(e[1] for e in evs)
+    flows = [r for r in flow_rows if start <= r[0] < end]
+    fk = collections.Counter(r[1] for r in flows)
+    stale_tasks = [t for t in tasks if t["stage"] != "shipped" and t["last"]
+                   and (end - dt.datetime.fromisoformat(t["last"])).days >= 7
+                   and (end - dt.datetime.fromisoformat(t["last"])).days < 60]
+    return {
+        "prompts": len(prompts),
+        "sessions": len({h[3] for h in prompts}),
+        "approvals": approvals,
+        "approvals_per_100": round(100 * approvals / len(plain), 1) if plain else 0,
+        "corrections": sum(1 for t in plain if CORRECTION.match(t)),
+        "interrupts": kinds["interrupt"],
+        "denials": kinds["denied"],
+        "tool_errors": kinds["error"],
+        "usage_checks": sum(1 for t in texts if t.startswith("/usage")),
+        "compactions": kinds["compact"] + sum(1 for t in texts if t.startswith("/compact")),
+        "flow_done": fk["done"],
+        "flow_reversed": fk["reversed"],
+        "reversal_rate": round(fk["reversed"] / fk["done"], 2) if fk["done"] else float(fk["reversed"]),
+        "stale_tasks": len(stale_tasks),
+        "friction": sum(1 for f in friction if start <= dt.datetime.strptime(f["ts"], "%Y-%m-%dT%H:%M:%S%z") < end),
+    }, stale_tasks
+
+
+def cmd_stats(args):
+    if args.end:
+        end = dt.datetime.strptime(args.end, "%Y-%m-%d").astimezone() + dt.timedelta(days=1)
+    else:
+        end = now()
+    start = end - dt.timedelta(days=args.days)
+    prev_start = start - dt.timedelta(days=args.days)
+
+    history = read_history(prev_start, end)
+    events = read_transcripts(prev_start, end)
+    flow_rows, tasks = read_flow(prev_start, end)
+    friction = read_friction(prev_start, end)
+
+    metrics, stale_tasks = measure(start, end, history, events, flow_rows, tasks, friction)
+    prev, _ = measure(prev_start, start, history, events, flow_rows, tasks, friction)
+
+    cur_hist = [h for h in history if h[0] >= start]
+    # Worktrees are only knowable as they are now, so a backfilled week has none.
+    worktrees = [] if args.end else read_worktrees({h[2] for h in cur_hist}, end)
+    metrics["stale_worktrees"] = None if args.end else sum(len(w["stale"]) for w in worktrees)
+    prev["stale_worktrees"] = None
+
+    key = week_key(end - dt.timedelta(seconds=1))
+    rng = random.Random(key)
+    cur_events = [e for e in events if e[0] >= start]
+
+    def sample(items):
+        items = list(items)
+        return rng.sample(items, min(SAMPLES, len(items)))
+
+    plain = [h[1].strip() for h in cur_hist if h[1].strip() and not h[1].startswith("/")]
+    commands = collections.Counter(h[1].split()[0] for h in cur_hist if h[1].startswith("/"))
+    projects = collections.Counter(pathlib.Path(h[2]).name for h in cur_hist)
+    errors = collections.Counter(e[2]["tool"] for e in cur_events if e[1] == "error")
+
+    report = {
+        "week": key,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "generated": now().isoformat(),
+        "days": args.days,
+        "metrics": metrics,
+        "prev": prev,
+        "commands": commands.most_common(10),
+        "projects": projects.most_common(6),
+        "tool_errors": errors.most_common(6),
+        "flow": {
+            "reversed": [{"task": r[2], "summary": r[3]} for r in flow_rows if r[0] >= start and r[1] == "reversed"],
+            "stale_tasks": stale_tasks,
+        },
+        "worktrees": worktrees,
+        "friction": [f for f in friction if dt.datetime.strptime(f["ts"], "%Y-%m-%dT%H:%M:%S%z") >= start],
+        "samples": {
+            "approvals": sample(e[2] for e in cur_events if e[1] == "approval"),
+            "interrupts": sample(e[2] for e in cur_events if e[1] == "interrupt" and e[2]["before"]),
+            "corrections": sample(t[:300] for t in plain if CORRECTION.match(t)),
+            "errors": sample(e[2] for e in cur_events if e[1] == "error"),
+        },
+    }
+    WEEKS.mkdir(parents=True, exist_ok=True)
+    path = WEEKS / ("%s.json" % key)
+    path.write_text(json.dumps(report, indent=1, ensure_ascii=False))
+
+    print("week %s  (%s → %s)  %s" % (key, start.date(), (end - dt.timedelta(seconds=1)).date(), path))
+    for name in SIGNALS + ACTIVITY:
+        before = prev.get(name)
+        delta = "" if before is None else "  (prev %s)" % before
+        print("  %-20s %s%s" % (name, metrics[name], delta))
+
+
+# ---------------------------------------------------------------- render
+
+CSS = """
+:root{--bg:#f4f3ef;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#8a8984;--line:#e4e2dc;
+--accent:#2a78d6;--accent-soft:#dbe8f8;--good:#0a7d0a;--bad:#c22f2f;--spark:#b9b7b0}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#111110;--surface:#1a1a19;--ink:#fff;
+--ink-2:#c3c2b7;--ink-3:#8f8e86;--line:#2c2c2a;--accent:#3987e5;--accent-soft:#1f3350;--good:#3fbf3f;--bad:#ef6a6a;--spark:#55544f}}
+:root[data-theme=dark]{--bg:#111110;--surface:#1a1a19;--ink:#fff;--ink-2:#c3c2b7;--ink-3:#8f8e86;--line:#2c2c2a;
+--accent:#3987e5;--accent-soft:#1f3350;--good:#3fbf3f;--bad:#ef6a6a;--spark:#55544f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:32px 16px 64px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:24px}
+h1{font-size:24px;margin:0}h2{font-size:16px;margin:32px 0 12px}h3{font-size:14px;margin:0 0 8px;color:var(--ink-2)}
+.muted{color:var(--ink-3)}select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.tile .label{color:var(--ink-2);font-size:13px}.tile .value{font-size:26px;font-weight:600;margin:2px 0}
+.delta{font-size:12px}.delta.good{color:var(--good)}.delta.bad{color:var(--bad)}.delta.flat{color:var(--ink-3)}
+svg.spark{display:block;margin-top:6px;overflow:visible}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px}
+ol,ul{margin:0;padding-left:20px}li{margin:6px 0}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--ink)}
+.tag.keep{background:transparent;border:1px solid var(--good);color:var(--good)}
+.tag.revert{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+.tag.adjust{background:transparent;border:1px solid var(--ink-3);color:var(--ink-2)}
+.bar{display:grid;grid-template-columns:minmax(90px,40%) 1fr 36px;align-items:center;gap:8px;margin:4px 0}
+.bar .track{height:10px}.bar .fill{height:10px;background:var(--accent);border-radius:0 4px 4px 0}
+.bar .n{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.bar .k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details{margin:8px 0}summary{cursor:pointer;color:var(--ink-2)}
+blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color:var(--ink-2);word-break:break-word}
+blockquote b{color:var(--ink)}table{border-collapse:collapse;width:100%}
+td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--ink-2);font-weight:500}.empty{color:var(--ink-3);font-style:italic}
+"""
+
+
+def esc(value):
+    return html.escape("" if value is None else str(value))
+
+
+def fmt(value):
+    if value is None:
+        return "–"
+    if isinstance(value, float) and not value.is_integer():
+        return "%.2g" % value if value < 1 else "%.1f" % value
+    return "{:,}".format(int(value))
+
+
+def delta_html(name, cur, prev):
+    if prev is None:
+        return '<span class="delta flat">no prior week</span>'
+    diff = cur - prev
+    if diff == 0:
+        return '<span class="delta flat">= same as prior week</span>'
+    arrow = "▲" if diff > 0 else "▼"
+    tone = "flat"
+    if name in LOWER_IS_BETTER:
+        tone = "bad" if diff > 0 else "good"
+    return '<span class="delta %s">%s %s%s vs prior week</span>' % (tone, arrow, "+" if diff > 0 else "", fmt(diff))
+
+
+def spark(name, weeks):
+    points = [(w["week"], w["metrics"].get(name)) for w in weeks if w["metrics"].get(name) is not None]
+    if len(points) < 2:
+        return ""
+    width, height = 160, 34
+    values = [v for _, v in points]
+    lo, hi = min(values), max(values)
+    span = (hi - lo) or 1
+    step = width / (len(points) - 1)
+    xy = [(i * step, height - 3 - (v - lo) / span * (height - 6)) for i, (_, v) in enumerate(points)]
+    line = " ".join("%.1f,%.1f" % p for p in xy)
+    hits = "".join(
+        '<circle cx="%.1f" cy="%.1f" r="9" fill="transparent"><title>%s: %s</title></circle>' % (x, y, esc(k), fmt(v))
+        for (x, y), (k, v) in zip(xy, points))
+    lx, ly = xy[-1]
+    return ('<svg class="spark" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="%s by week">'
+            '<polyline points="%s" fill="none" stroke="var(--spark)" stroke-width="2" stroke-linejoin="round"/>'
+            '<circle cx="%.1f" cy="%.1f" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>%s</svg>'
+            % (width, height, width, height, esc(LABELS[name]), line, lx, ly, hits))
+
+
+def tiles(names, week, weeks):
+    out = []
+    for name in names:
+        cur = week["metrics"].get(name)
+        out.append('<div class="card tile"><div class="label">%s</div><div class="value">%s</div>%s%s</div>'
+                   % (esc(LABELS[name]), fmt(cur), delta_html(name, cur, week["prev"].get(name)), spark(name, weeks)))
+    return '<div class="grid">%s</div>' % "".join(out)
+
+
+def bars(title, pairs):
+    if not pairs:
+        return '<div class="card"><h3>%s</h3><p class="empty">none</p></div>' % esc(title)
+    top = max(n for _, n in pairs) or 1
+    rows = "".join('<div class="bar"><span class="k" title="%s">%s</span><span class="track"><div class="fill" '
+                   'style="width:%.0f%%"></div></span><span class="n">%s</span></div>'
+                   % (esc(k), esc(k), 100 * n / top, fmt(n)) for k, n in pairs)
+    return '<div class="card"><h3>%s</h3>%s</div>' % (esc(title), rows)
+
+
+def review_html(review, prev_review):
+    parts = []
+    experiments = (review or {}).get("experiments") or []
+    if experiments:
+        rows = "".join("<tr><td>%s</td><td>%s</td><td>%s</td></tr>"
+                       % (esc(e.get("change")), esc(LABELS.get(e.get("metric"), e.get("metric"))),
+                          esc(e.get("target", "down"))) for e in experiments)
+        parts.append('<div class="card"><h3>Running this week</h3><table><tr><th>Change</th><th>Watch</th>'
+                     '<th>Want</th></tr>%s</table></div>' % rows)
+    verdicts = (review or {}).get("verdicts") or []
+    if verdicts:
+        rows = "".join('<tr><td>%s</td><td>%s → %s</td><td><span class="tag %s">%s</span> %s</td></tr>'
+                       % (esc(v.get("experiment")), fmt(v.get("before")), fmt(v.get("after")),
+                          esc(v.get("verdict")), esc(v.get("verdict")), esc(v.get("note")))
+                       for v in verdicts)
+        parts.append('<div class="card"><h3>Last week\'s experiments</h3><table><tr><th>Change</th>'
+                     '<th>Metric</th><th>Verdict</th></tr>%s</table></div>' % rows)
+    if not parts:
+        return '<p class="empty">No review recorded for this week yet. Run /retro.</p>'
+    return '<div class="cols">%s</div>' % "".join(parts)
+
+
+def findings_html(review):
+    findings = (review or {}).get("findings") or []
+    if not findings:
+        return '<p class="empty">No findings recorded.</p>'
+    items = "".join('<li><b>%s</b> %s<br><span class="muted">Evidence:</span> %s<br>'
+                    '<span class="muted">Change:</span> %s %s</li>'
+                    % (esc(f.get("title")), '<span class="tag">picked</span>' if f.get("picked") else "",
+                       esc(f.get("evidence")), esc(f.get("change")),
+                       '<code>%s</code>' % esc(f["file"]) if f.get("file") else "") for f in findings)
+    return '<div class="card"><ol>%s</ol></div>' % items
+
+
+def evidence_html(week):
+    s = week.get("samples", {})
+    blocks = []
+    if s.get("approvals"):
+        q = "".join("<blockquote>…%s<br><b>→ %s</b></blockquote>" % (esc(a["before"]), esc(a["reply"]))
+                    for a in s["approvals"])
+        blocks.append("<details><summary>What Claude said before a one-word reply (%d)</summary>%s</details>"
+                      % (len(s["approvals"]), q))
+    if s.get("interrupts"):
+        q = "".join("<blockquote>…%s</blockquote>" % esc(a["before"]) for a in s["interrupts"])
+        blocks.append("<details><summary>Last thing Claude said before you interrupted (%d)</summary>%s</details>"
+                      % (len(s["interrupts"]), q))
+    if s.get("corrections"):
+        q = "".join("<blockquote>%s</blockquote>" % esc(t) for t in s["corrections"])
+        blocks.append("<details><summary>Your corrections (%d)</summary>%s</details>" % (len(s["corrections"]), q))
+    if s.get("errors"):
+        q = "".join("<blockquote><b>%s</b> %s</blockquote>" % (esc(e["tool"]), esc(e["text"])) for e in s["errors"])
+        blocks.append("<details><summary>Tool errors (%d)</summary>%s</details>" % (len(s["errors"]), q))
+    return '<div class="card">%s</div>' % ("".join(blocks) or '<p class="empty">No samples.</p>')
+
+
+def friction_html(week):
+    rows = week.get("friction") or []
+    if not rows:
+        return '<p class="empty">No friction captured this week. Use /friction when something gets in the way.</p>'
+    body = "".join("<tr><td>%s</td><td>%s<br><span class='muted'>%s</span></td><td>%s</td></tr>"
+                   % (esc(r["ts"][:10]), esc(r["repo"]), esc(r["branch"]), esc(r["text"])) for r in rows)
+    return '<div class="card"><table><tr><th>Date</th><th>Where</th><th>Note</th></tr>%s</table></div>' % body
+
+
+def flow_html(week):
+    f = week.get("flow", {})
+    rev = "".join("<li><b>%s</b> %s</li>" % (esc(r["task"]), esc(r["summary"])) for r in f.get("reversed", []))
+    stale = "".join("<li>%s <span class='muted'>%s · last log %s</span></li>"
+                    % (esc(t["task"]), esc(t["stage"] or "no stage"), esc((t["last"] or "")[:10]))
+                    for t in f.get("stale_tasks", []))
+    wts = "".join("<li>%s: %d worktrees%s</li>" % (
+        esc(w["repo"]), w["count"], (", stale: " + esc(", ".join(w["stale"]))) if w["stale"] else "")
+        for w in week.get("worktrees", []))
+    return ('<div class="cols"><div class="card"><h3>Reversed decisions</h3>%s</div>'
+            '<div class="card"><h3>Stale flow tasks</h3>%s</div><div class="card"><h3>Worktrees</h3>%s</div></div>'
+            % ("<ul>%s</ul>" % rev if rev else '<p class="empty">none</p>',
+               "<ul>%s</ul>" % stale if stale else '<p class="empty">none</p>',
+               "<ul>%s</ul>" % wts if wts else '<p class="empty">none</p>'))
+
+
+def week_section(week, weeks, review, prev_review, hidden):
+    start = week["start"][:10]
+    end = (dt.datetime.fromisoformat(week["end"]) - dt.timedelta(seconds=1)).date().isoformat()
+    return """
+<section class="week" id="%s" %s>
+<header><h1>Workflow retro · %s</h1><span class="muted">%s → %s · generated %s</span></header>
+<h2>Experiments</h2>%s
+<h2>Signals</h2>%s
+<h2>Activity</h2>%s
+<h2>Findings</h2>%s
+<h2>Friction</h2>%s
+<h2>Evidence</h2>%s
+<h2>Breakdown</h2><div class="cols">%s%s%s</div>
+%s
+</section>""" % (
+        esc(week["week"]), hidden, esc(week["week"]), esc(start), esc(end), esc(week["generated"][:16].replace("T", " ")),
+        review_html(review, prev_review), tiles(SIGNALS, week, weeks), tiles(ACTIVITY, week, weeks),
+        findings_html(review), friction_html(week), evidence_html(week),
+        bars("Slash commands", week.get("commands")), bars("Tool errors by tool", week.get("tool_errors")),
+        bars("Prompts by project", week.get("projects")), flow_html(week))
+
+
+def cmd_render(args):
+    files = sorted(p for p in WEEKS.glob("*.json") if not p.name.endswith(".review.json"))
+    if not files:
+        sys.exit("no weeks in %s — run `retro stats` first" % WEEKS)
+    weeks = [json.loads(p.read_text()) for p in files]
+    reviews = {}
+    for p in WEEKS.glob("*.review.json"):
+        reviews[p.name.split(".")[0]] = json.loads(p.read_text())
+    current = args.week or weeks[-1]["week"]
+    sections, options = [], []
+    for i, week in enumerate(weeks):
+        prev_review = reviews.get(weeks[i - 1]["week"]) if i else None
+        hidden = "" if week["week"] == current else "hidden"
+        sections.append(week_section(week, weeks[: i + 1], reviews.get(week["week"]), prev_review, hidden))
+        options.append('<option value="%s"%s>%s</option>'
+                       % (esc(week["week"]), " selected" if week["week"] == current else "", esc(week["week"])))
+    page = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Workflow Retro</title>
+<style>@@CSS@@</style></head><body><main>
+<div style="display:flex;justify-content:flex-end;gap:8px"><label class="muted" for="wk">Week</label>
+<select id="wk">@@OPTIONS@@</select></div>
+@@SECTIONS@@
+</main><script>
+document.getElementById('wk').addEventListener('change', e => {
+  document.querySelectorAll('section.week').forEach(s => s.hidden = s.id !== e.target.value);
+});
+</script></body></html>"""
+    page = page.replace("@@CSS@@", CSS).replace("@@OPTIONS@@", "".join(reversed(options)))
+    page = page.replace("@@SECTIONS@@", "".join(sections))
+    out = RETRO / "dashboard.html"
+    out.write_text(page)
+    print(out)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("friction", help="capture one friction note")
+    p.add_argument("text", nargs="+")
+    p.set_defaults(func=cmd_friction)
+    p = sub.add_parser("stats", help="measure a window and write its week file")
+    p.add_argument("--days", type=int, default=7)
+    p.add_argument("--end", help="last day of the window, YYYY-MM-DD (default: now)")
+    p.set_defaults(func=cmd_stats)
+    p = sub.add_parser("render", help="write the dashboard")
+    p.add_argument("--week", help="week shown first, e.g. 2026-W40 (default: latest)")
+    p.set_defaults(func=cmd_render)
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

@@ -14,7 +14,7 @@ Load the `craft:principles` skill first — it governs how you write the code.
 ## Input
 
 One argument: the path to a brief file. Read it first. It carries the Problem,
-the relevant Done when conditions, the Invariants, the approved todo list, and
+the relevant Done when conditions, the Invariants, the todo list, and
 the paths you need. If it is missing or unreadable, stop and say so.
 
 ## Loop

@@ -22,7 +22,7 @@ flow-log <folder> <kind> "<summary>" [--phase N] [--ref X]
 
 **Example**
 ```bash
-flow-log ~/.flow/plans/chat/123-chat-backend \
+flow-log ~/.tenx/flow/chat/123-chat-backend \
     decision "route pattern selection through the cap check, not around it" \
     --phase 2 --ref 8f2a11c
 ```
@@ -57,8 +57,8 @@ Closed set; the script rejects anything else.
 Read the tail rather than the file:
 
 ```bash
-tail -5 ~/.flow/plans/<repo>/<slug>/logs.tsv
-awk -F'\t' '$2=="reversed"' ~/.flow/plans/<repo>/<slug>/logs.tsv
+tail -5 ~/.tenx/flow/<repo>/<slug>/logs.tsv
+awk -F'\t' '$2=="reversed"' ~/.tenx/flow/<repo>/<slug>/logs.tsv
 ```
 
 When sources disagree, precedence runs:

@@ -19,7 +19,7 @@ Load the `flow` skill first.
 2. **Propose.** Draft Problem and Done when in chat and get the user's yes.
    Every Done when condition must be checkable by someone who did not write it.
 3. **Write.** Resolve the slug (issue-number-prefixed if one exists), create
-   `~/.flow/plans/<repo>/<slug>/` and write `contract.md` per the schema with
+   `~/.tenx/flow/<repo>/<slug>/` and write `contract.md` per the schema with
    `stage: brainstorming`. Fill Domain from what the exploration found; leave
    unresolved items under Open questions.
 4. **Close.** Echo the folder path and suggest `/architect <slug>` as the next step.

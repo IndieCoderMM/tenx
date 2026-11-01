@@ -35,7 +35,7 @@ def clean(value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("folder", help="task folder, e.g. ~/.flow/plans/chat/4923-storyboard")
+    parser.add_argument("folder", help="task folder, e.g. ~/.tenx/flow/chat/4923-storyboard")
     parser.add_argument("kind", choices=KINDS)
     parser.add_argument("summary", help="one line, no tabs; truncated at %d chars" % MAX_SUMMARY)
     parser.add_argument("--phase", default="", help="phase number this row belongs to")

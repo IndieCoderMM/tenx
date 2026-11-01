@@ -14,7 +14,7 @@ description: Structured workflow for agentic coding tasks. Load before running a
 
 ##  Flow docs
 
-`DIR=~/.flow/plans`
+`DIR=~/.tenx/flow`
 
 Flow docs are context files written under `DIR` directory. These docs are designed to prevent the failure modes of normal agentic coding: context lost between sessions so each one re-derives the task from scratch, scope creep mid-build, decisions silently reversed or relitigated, "done" claims nobody can check, and review feedback that evaporates instead of becoming tracked work. Only a flow skill's own invocation writes to these files.
 

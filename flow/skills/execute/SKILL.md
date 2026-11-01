@@ -19,11 +19,13 @@ subagent's model, defaulting to `sonnet`.
 1. **Orient.** Resolve the slug. Read `contract.md` and `tasks.md`,
    and tail `logs.tsv` for the resume signal. Determine the target phase; if all
    its items are already ticked, say so and stop.
-2. **Propose.** Turn the phase's items into a concrete execution todo list in
-   chat — files to touch, order of work, how it will be verified — and get the
-   user's yes.
+2. **Plan.** Turn the phase's items into a concrete execution todo list in
+   chat — files to touch, order of work, how it will be verified. The phase was
+   approved in `/architect`, so go straight to step 3. Stop for the user's yes
+   only when the list departs from the phase: work its items don't name, or an
+   item too vague to brief without guessing.
 3. **Delegate.** Write a self-contained brief to a tmp file: the Problem, the
-   relevant Done when conditions, the Invariants, the approved todo list, and
+   relevant Done when conditions, the Invariants, the todo list, and
    the paths it needs. Spawn `flow-builder` on the given model with the brief
    path as its prompt.
 4. **Report.** Verify the agent's claims against the working tree, then report:
@@ -33,13 +35,13 @@ subagent's model, defaulting to `sonnet`.
 
 ## Rules
 
-- Never spawn the subagent before the user approves the todo list.
+- A todo list that departs from the phase waits for the user's yes; one that matches it does not.
 - One phase per run; work outside the phase goes to Backlog, not into the brief.
 - No flow-doc edits beyond log rows.
 
 ## Templates
 
-Todo proposal:
+Todo list:
 
 ```markdown
 Phase N — <name> · model: <model>

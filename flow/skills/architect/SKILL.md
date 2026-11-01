@@ -18,7 +18,10 @@ Load the `flow` skill first.
    with the user using `/grilling`.
 3. **Propose.** Draft the phase split in chat — phase names and their tasks —
    and get the user's yes. Size each phase as one unit of accepted work, not one
-   session.
+   session. Under each phase, list the code facts it rests on — a function is
+   called from X, data flows through Y, a component owns Z — each with the
+   `file:line` you read it at. A fact you cannot point to is unverified: read
+   the code until you can, or drop the task that rests on it.
 4. **Write.**
    - Phases and tasks into `tasks.md` per the schema (`P.N.M` ids).
    - Decisions that constrain later work → `contract.md` Invariants.
@@ -33,6 +36,8 @@ Load the `flow` skill first.
 - Phases are written once — adding work later is `/iterate`'s job, not yours.
 - Never touch Problem or Done when.
 - No code changes; planning only.
+- No phase rests on a code fact without a `file:line` behind it. Carried-over
+  claims from earlier tasks or the contract get re-read, not trusted.
 
 ## Related skills
 

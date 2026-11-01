@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "tutor",
+  "version": "0.1.0",
+  "displayName": "Tutor",
+  "description": "Personal technical tutor — learn topics in depth through reasoning, prediction, and practice, with mastery tracking and spaced review across sessions.",
+  "author": { "name": "Hein Thant" }
+}
