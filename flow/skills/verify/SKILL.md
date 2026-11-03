@@ -13,10 +13,10 @@ Load the `flow` and `craft:proof` skills first — `proof` is how the cases get 
 ## Steps
 
 1. **Orient.** Resolve the slug. Read the contract's Done when, the
-   accepted phases and iteration items in `tasks.md`, and anything `/validate`
-   flagged as risky or needing manual QA.
+   accepted phases, iteration items, and Review Focus in `tasks.md`, and anything
+   `/validate` flagged as risky or needing manual QA.
 2. **Generate.** Derive test cases in that order: Done when conditions first,
-   then accepted work, then the risky spots. Each case is one action and its
+   then accepted work, then the Review Focus lines and risky spots. Each case is one action and its
    expected result, phrased so failure is unambiguous.
 3. **Write.** Append the cases to `qa.md` per the schema (generated date,
    commit SHA). Set `stage: verifying`.

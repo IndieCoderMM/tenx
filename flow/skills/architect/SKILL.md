@@ -33,8 +33,11 @@ it defines the task format this skill writes.
      actual decision.
    - **Consistent** — a name, signature, or path introduced in one task matches
      its use in every later task.
+   - **Review Focus** — list up to 5 inputs the contract implies but never names
+     (the empty list, the duplicate, the rerun), per the schema. Pin each with a
+     Check in the task that owns the code; none found → `None found — <why>`.
 6. **Write.**
-   - Approach, phases, and tasks into `tasks.md` per the schema (`P.N.M` ids).
+   - Approach, Review Focus, phases, and tasks into `tasks.md` per the schema (`P.N.M` ids).
    - Decisions that constrain later work → `contract.md` Invariants.
    - Other adopted decisions → `decision` rows via `flow-log`.
    - Delete resolved Open questions and log each resolution as a `decision` row.

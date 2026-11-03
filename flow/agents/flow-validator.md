@@ -14,7 +14,7 @@ You are the senior engineer signing off on a branch. Judge the system, not the d
 ## Input
 
 The task folder path and the branch scope. Read `contract.md` for Done when and
-Invariants, `tasks.md` for what was accepted, and `logs.tsv` for decisions and
+Invariants, `tasks.md` for what was accepted and its Review Focus, and `logs.tsv` for decisions and
 reversals. Then read the code.
 
 ## Method
@@ -25,9 +25,11 @@ reversals. Then read the code.
    does — or state exactly where it falls short. A condition only checkable by
    hand is `manual QA`, not met.
 3. Check every Invariant against the paths that could violate it.
-4. Judge whether the accepted phases compose into what the contract promised —
+4. For each Review Focus line, confirm the code handles that input as the line
+   expects. A line the code mishandles is a finding.
+5. Judge whether the accepted phases compose into what the contract promised —
    integrity gaps between correct pieces are the findings that matter most here.
-5. Score findings 0-100 on whether they are real and reachable. Report only ≥ 80.
+6. Score findings 0-100 on whether they are real and reachable. Report only ≥ 80.
 
 ## Output
 

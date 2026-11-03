@@ -87,6 +87,9 @@ Every other command stays read-only on these sections, `stage:` aside.
 
 **Approach:** <2-3 sentences: the chosen approach and why>
 
+## Review Focus
+- <input the contract implies but never names> → <what a reasonable user expects> (pinned: P.N.M)
+
 ## Phase N — <name>
 - [ ] P.N.1 <task name>
   - Files: `src/exact/path.ts:40-62` (modify), `src/exact/new.ts` (create)
@@ -130,6 +133,18 @@ A task is written so a builder can start it without asking anything:
 
 **Approach** is written once by `architect`, alongside the phases.
 
+### Review Focus
+
+Written once by `architect`. Up to 5 inputs or failure modes the contract
+implies but never names, and that no task's Check would otherwise exercise:
+the empty list, the duplicate, the field with a comma, the rerun. Most likely
+first; each line is the input, then what a reasonable user expects.
+
+- Each line is pinned by a Check in the task that owns the code, and names that task.
+- Nothing implied → `None found — <why>`. An empty section means the check was
+  done, not skipped.
+- `validate` confirms each line against the code; `verify` turns each into a QA case.
+
 > "Update the handler to handle errors" — not a task, reject it.
 > "`parseRow` in `src/csv.ts:40-62` throws `RowError(line)` on an unclosed quote" — a Decision.
 
@@ -168,4 +183,4 @@ generated: YYYY-MM-DD  against: <commit sha>
 > "Submit with an empty email — inline error under the field, no request fires." — usable.
 
 - Derive steps from `Done when` first, then the accepted phases and iteration
-  items, then whatever `validate` flagged as risky.
+  items, then the Review Focus lines and whatever `validate` flagged as risky.

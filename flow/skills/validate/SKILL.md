@@ -18,7 +18,7 @@ Load the `flow` skill first.
 2. **Delegate.** Spawn two agents in parallel:
    - `flow-reviewer` — pure code review over the full-branch diff.
    - `flow-validator` — the deep pass: traces the system end to end and
-     confirms it against Done when and Invariants.
+     confirms it against Done when, Invariants, and the Review Focus lines.
 3. **Cross-check.** Merge both reports: dedupe, and drop anything the other
    agent's evidence contradicts.
 4. **Report.** Two sections: per Done when condition — met, not met, or needs
