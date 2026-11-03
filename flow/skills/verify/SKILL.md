@@ -21,8 +21,8 @@ Load the `flow` and `craft:proof` skills first — `proof` is how the cases get 
 3. **Write.** Append the cases to `qa.md` per the schema (generated date,
    commit SHA). Set `stage: verifying`.
 4. **Hand over.** Point the user at `qa.md` to run the cases and tick what
-   passes; failures go to `/iterate <slug>`. All cases ticked → suggest
-   `/ship <slug>`, whose gate ticks the Done when boxes.
+   passes, and end with `Next: /ship <slug> | /iterate <slug>` — ship when all
+   cases pass (its gate ticks the Done when boxes), iterate on failures.
 
 ## Rules
 

@@ -22,8 +22,8 @@ Load the `flow` skill first.
 3. **Cross-check.** Merge both reports: dedupe, and drop anything the other
    agent's evidence contradicts.
 4. **Report.** Two sections: per Done when condition — met, not met, or needs
-   manual QA; then confirmed findings with file:line and severity. Suggest
-   `/iterate <slug>` when changes are required, `/verify <slug>` when clean.
+   manual QA; then confirmed findings with file:line and severity. End with
+   `Next: /iterate <slug>` when changes are required, `Next: /verify <slug>` when clean.
 
 ## Rules
 

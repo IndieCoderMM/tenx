@@ -33,8 +33,9 @@ Load the `flow` skill first.
      logged decision. Then a `decision` row for what replaces it.
    - Set `stage:` only when the shift moves the task back — a rewritten
      `Done when` usually means `building`.
-5. **Close.** Report what moved and route: `/iterate` to add work under the new
-   target, `/architect` only if the phase split is now meaningless.
+5. **Close.** Report what moved and end with `Next: /iterate <slug>` to add
+   work under the new target, or `Next: /architect <slug>` only if the phase
+   split is now meaningless.
 
 ## Rules
 

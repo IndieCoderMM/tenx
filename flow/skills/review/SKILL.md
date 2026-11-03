@@ -19,8 +19,8 @@ Load the `flow` skill first.
 2. **Delegate.** Spawn `flow-reviewer` with the diff range and the task folder
    path. It filters its own findings by confidence.
 3. **Report.** Relay the findings as returned. Findings outside the phase's
-   scope go to Backlog. Suggest `/checkpoint <slug>` if clean, otherwise
-   `/execute <slug>` to address them.
+   scope go to Backlog. End with `Next: /checkpoint <slug>` if clean, otherwise
+   `Next: /execute <slug>` to address them.
 
 ## Rules
 

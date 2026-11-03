@@ -22,7 +22,7 @@ Load the `flow` skill first.
    `~/.tenx/flow/<repo>/<slug>/` and write `contract.md` per the schema with
    `stage: brainstorming`. Fill Domain from what the exploration found; leave
    unresolved items under Open questions.
-4. **Close.** Echo the folder path and suggest `/architect <slug>` as the next step.
+4. **Close.** Echo the folder path and end with `Next: /architect <slug>`.
 
 ## Rules
 

@@ -85,9 +85,16 @@ Every other command stays read-only on these sections, `stage:` aside.
 ```markdown
 # <slug> — tasks
 
+**Approach:** <2-3 sentences: the chosen approach and why>
+
 ## Phase N — <name>
-- [ ] P.N.1 <task 1>
-- [ ] P.N.2 <task 2>
+- [ ] P.N.1 <task name>
+  - Files: `src/exact/path.ts:40-62` (modify), `src/exact/new.ts` (create)
+  - Decision: <1-4 lines: what changes and why — names, signatures, behavior, edge cases>
+  - Check: <input or state → expected result, one per line>
+  - Verify: `<exact command>` → <expected result>
+- [ ] P.N.2 <task name>
+  - …
 ---
 ## Iteration N
 - [ ] I.N.1 <one line fix>
@@ -106,6 +113,25 @@ A phase is one unit of accepted work, not one session — it may span several
 on it as a unit.
 
 `architect` may not add a phase after the fact and `iterate` may not touch this section. 
+
+A task is written so a builder can start it without asking anything:
+
+- **Size** — 2-5 minutes of work. A Decision that needs more than 4 lines is two tasks.
+- **Files** — exact repo-relative paths, with line ranges for modifications.
+  Every path and line was read while planning. Line ranges are plan-time hints;
+  the builder re-locates code by content when an earlier task shifted it.
+- **Decision** — what to build and why, not the code. Code appears only where
+  the exact text *is* the decision (a regex, a signature, an error string), in
+  ≤10 lines.
+- **Check** — what proves the task works, specific enough to write the test from:
+  `order with no items → 400 "order has no items"`, not "handles empty orders".
+- **Verify** — the exact command and its expected result. A manual step when
+  nothing can be run.
+
+**Approach** is written once by `architect`, alongside the phases.
+
+> "Update the handler to handle errors" — not a task, reject it.
+> "`parseRow` in `src/csv.ts:40-62` throws `RowError(line)` on an unclosed quote" — a Decision.
 
 ### Iterations 
 

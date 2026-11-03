@@ -20,8 +20,8 @@ Load the `flow` skill first.
 4. **Docs**: Update `flow` docs.
    - Tick the phase's (or iteration's) boxes in `tasks.md`.
    - Log a `done` row via `flow-log` with `--phase` and the commit SHA as `--ref`
-5. **Report.** State what was accepted and name the next open phase or
-   iteration item, or suggest `/validate <slug>` when none remain.
+5. **Report.** State what was accepted and end with `Next: /execute <slug>`
+   naming the next open phase or iteration, or `Next: /validate <slug>` when none remain.
 
 ## Related skills
 

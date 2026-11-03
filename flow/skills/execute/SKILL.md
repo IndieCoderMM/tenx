@@ -6,57 +6,38 @@ disable-model-invocation: true
 
 # Execute
 
-Implement one phase of `tasks.md` through a subagent. Brief, delegate, verify, report.
+Implement one phase of `tasks.md` through a subagent. Delegate, verify, report.
 
 Load the `flow` skill first.
 
 Arguments: `[slug] [phase] [model]` — all optional. `phase` defaults to the first
-phase with unticked items; `model` (e.g. `sonnet`, `opus`, `haiku`) sets the
-subagent's model, defaulting to `sonnet`.
+phase or iteration block with unticked items; `model` (e.g. `sonnet`, `opus`, `haiku`)
+sets the subagent's model, defaulting to `sonnet`.
 
 ## Steps
 
 1. **Orient.** Resolve the slug. Read `contract.md` and `tasks.md`,
    and tail `logs.tsv` for the resume signal. Determine the target phase; if all
    its items are already ticked, say so and stop.
-2. **Plan.** Turn the phase's items into a concrete execution todo list in
-   chat — files to touch, order of work, how it will be verified. The phase was
-   approved in `/architect`, so go straight to step 3. Stop for the user's yes
-   only when the list departs from the phase: work its items don't name, or an
-   item too vague to brief without guessing.
-3. **Delegate.** Write a self-contained brief to a tmp file: the Problem, the
-   relevant Done when conditions, the Invariants, the todo list, and
-   the paths it needs. Spawn `flow-builder` on the given model with the brief
-   path as its prompt.
-4. **Report.** Verify the agent's claims against the working tree, then report:
+2. **Delegate.** Spawn `flow-builder` on the given model. Its prompt is the task
+   folder path, the phase id (`2` or `I.1`), and any log notes the builder needs
+   (a prior block, a finding an iteration item came from). Paths only — never
+   paste contract or task text; the builder reads the files.
+3. **Report.** Verify the agent's claims against the working tree, then report:
    what was built, what was verified, anything the agent hit that a future
-   session needs (log it as a `note` or `decision` row). Suggest `/review <slug>`
-   as the next step.
+   session needs (log it as a `note` or `decision` row).
 
 ## Rules
 
-- A todo list that departs from the phase waits for the user's yes; one that matches it does not.
-- One phase per run; work outside the phase goes to Backlog, not into the brief.
+- The phase was approved in `/architect` — delegate it as written. An item too
+  vague to build without guessing waits for the user before delegating.
+- One phase per run; work outside the phase goes to Backlog, not into the prompt.
 - No flow-doc edits beyond log rows.
 
-## Templates
-
-Todo list:
+## Template — report
 
 ```markdown
 Phase N — <name> · model: <model>
-
-**Todos**
-1. <todo> — <files>
-2. …
-
-Verify by: <how the result will be checked>
-```
-
-Report:
-
-```markdown
-Phase N — <name>
 
 **Built** <what changed, file:line refs>
 **Verified** <checks run and result>

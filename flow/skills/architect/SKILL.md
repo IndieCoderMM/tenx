@@ -1,14 +1,16 @@
 ---
 name: architect
-description: Plan an approved flow task — settle the approach, split it into phases, write tasks.md.
+description: Plan an approved flow task — settle the approach, split it into phases, write build-ready tasks into tasks.md.
 disable-model-invocation: true
 ---
 
 # Architect
 
-Turn an approved `contract.md` into phases in `tasks.md`. Decide first, write last.
+Turn an approved `contract.md` into phases of build-ready tasks in `tasks.md`.
+Decide first, write last.
 
-Load the `flow` skill first.
+Load the `flow` skill first, then read the `tasks.md` section of `references/schema.md` —
+it defines the task format this skill writes.
 
 ## Steps
 
@@ -16,19 +18,28 @@ Load the `flow` skill first.
    approved Problem and Done when, stop and point to `/brainstorm`.
 2. **Decide.** Explore the relevant code and settle the implementation approach
    with the user using `/grilling`.
-3. **Propose.** Draft the phase split in chat — phase names and their tasks —
-   and get the user's yes. Size each phase as one unit of accepted work, not one
-   session. Under each phase, list the code facts it rests on — a function is
-   called from X, data flows through Y, a component owns Z — each with the
-   `file:line` you read it at. A fact you cannot point to is unverified: read
-   the code until you can, or drop the task that rests on it.
-4. **Write.**
-   - Phases and tasks into `tasks.md` per the schema (`P.N.M` ids).
+3. **Propose.** Draft the Approach and the phase split in chat — phase names and
+   one line per task — and get the user's yes. Size each phase as one unit of
+   accepted work, not one session.
+4. **Detail.** Expand every task into the schema's task format: Files, Decision,
+   Check, Verify. Read the code behind each path and line range — a fact you
+   cannot point to at a `file:line` is unverified: read until you can, or drop
+   the task that rests on it.
+5. **Self-check.** Fix every gap in place before writing:
+   - **Coverage** — every Done when condition maps to at least one task. A
+     condition with no task gets one now.
+   - **Concrete** — every task has Files, Decision, Check, and Verify. No `TBD`,
+     "handle errors", "as needed", or "same as P.N.M"; replace each with the
+     actual decision.
+   - **Consistent** — a name, signature, or path introduced in one task matches
+     its use in every later task.
+6. **Write.**
+   - Approach, phases, and tasks into `tasks.md` per the schema (`P.N.M` ids).
    - Decisions that constrain later work → `contract.md` Invariants.
    - Other adopted decisions → `decision` rows via `flow-log`.
    - Delete resolved Open questions and log each resolution as a `decision` row.
    - Set `stage: building`.
-5. **Close.** Echo the folder path and suggest `/execute <slug>` as the next step.
+7. **Close.** Echo the `tasks.md` path and end with `Next: /execute <slug>`.
 
 ## Rules
 
@@ -36,8 +47,7 @@ Load the `flow` skill first.
 - Phases are written once — adding work later is `/iterate`'s job, not yours.
 - Never touch Problem or Done when.
 - No code changes; planning only.
-- No phase rests on a code fact without a `file:line` behind it. Carried-over
-  claims from earlier tasks or the contract get re-read, not trusted.
+- Carried-over claims from earlier tasks or the contract get re-read, not trusted.
 
 ## Related skills
 

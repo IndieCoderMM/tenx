@@ -23,7 +23,7 @@ Load the `flow` skill first.
 3. **Write.** Append one `## Iteration N` block to `tasks.md` per the schema.
    Promoted Backlog items are deleted from Backlog in the same write. Apply the
    approved `contract.md` edits. Set `stage: building`.
-4. **Close.** Suggest `/execute <slug>` to work the iteration.
+4. **Close.** End with `Next: /execute <slug>` to work the iteration.
 
 ## Rules
 

@@ -23,7 +23,7 @@ Flow docs are context files written under `DIR` directory. These docs are design
 ```
 <repo-name>/<slug>/
 ├── contract.md   # problem, done-when, domain, invariants
-├── tasks.md      # phases as checkboxes + terse notes
+├── tasks.md      # approach, phases of build-ready tasks, iterations
 ├── qa.md         # manual QA steps
 └── logs.tsv      # append-only decision log
 ```
@@ -60,6 +60,10 @@ Slugs are kebab-case, prefixed with the issue number when one exists (`123-chat-
 Out of band, at any stage:
 
 - `/revise` - The target moved. Rewrite `contract.md` and log the reversal.
+
+Every command but `/ship` ends its report with exactly one line:
+`Next: /<command> <slug>`. Name the command that applies; join alternatives
+with `|` only when the choice is the user's.
 
 ## Related skills
 
