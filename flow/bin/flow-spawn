@@ -5,7 +5,9 @@
 #   flow-spawn review <slug>
 #   flow-spawn proto  <slug> route|file "<question>"
 #
-# Run from the repo's main checkout. Exit 3: the session never became ready.
+# Run from HQ's directory: the feature worktree (build, review) or any checkout
+# (proto). build and review share that directory; a route prototype gets its own
+# worktree. Exit 3: the session never became ready.
 set -euo pipefail
 
 die() { echo "flow-spawn: $*" >&2; exit "${2:-1}"; }
@@ -15,13 +17,13 @@ kind="${1:-}"; slug="${2:-}"
 [ -n "$kind" ] && [ -n "$slug" ] || die "usage: flow-spawn build|review|proto <slug> ..."
 shift 2
 
-main="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)")" \
-  || die "not inside a git repo"
+here="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not inside a git repo"
+main="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
 repo="$(basename "$main")"
 dir="$HOME/.tenx/flow/$repo/$slug"
 mkdir -p "$dir"
 
-args=(-g "$repo" -l)
+args=(-l)
 parent="$(aoe session current -q 2>/dev/null || true)"
 [ -n "$parent" ] && args+=(-P "$parent")
 claude_args="--permission-mode auto"
@@ -29,14 +31,14 @@ claude_args="--permission-mode auto"
 case "$kind" in
   build)
     [ -f "$dir/plan.md" ] || die "no plan.md at $dir — run /flow:shape first"
+    [ "$here" != "$main" ] || die "HQ is in the main checkout — start HQ in a feature worktree and spawn from there"
     if [ "${1:-}" = "--model" ]; then claude_args+=" --model ${2:?--model needs a value}"; fi
-    title="build-$slug"; path="$main"; args+=(-w "$slug" -b)
+    title="build-$slug"; path="$here"
     msg="/flow:build $slug"
     ;;
   review)
-    path="$(aoe session show "build-$slug" --json 2>/dev/null | field path)"
-    [ -n "$path" ] || die "no build-$slug session to review"
-    title="review-$slug"
+    [ "$here" != "$main" ] || die "HQ is in the main checkout — run from the feature worktree"
+    title="review-$slug"; path="$here"
     msg="/flow:review $slug"
     ;;
   proto)
@@ -44,10 +46,10 @@ case "$kind" in
     [ -n "$question" ] || die "usage: flow-spawn proto <slug> route|file \"<question>\""
     mkdir -p "$dir/proto"
     printf '%s\n' "$question" > "$dir/proto/question.md"
-    title="proto-$slug"; path="$main"
+    title="proto-$slug"
     case "$mode" in
-      route) args+=(-w "$slug-proto" -b) ;;
-      file)  claude_args+=" --add-dir $dir" ;;
+      route) path="$main"; args+=(-w "$slug-proto" -b) ;;
+      file)  path="$here"; claude_args+=" --add-dir $dir" ;;
       *) die "proto mode must be route or file" ;;
     esac
     msg="/flow:proto $slug $mode"
@@ -59,7 +61,7 @@ aoe session show "$title" --json >/dev/null 2>&1 && die "session $title already 
 
 aoe add "$path" -t "$title" "${args[@]}" --extra-args "$claude_args" >/dev/null
 
-# Ready = Claude's input prompt is on screen. A worktree's on_create hook may
+# Ready = Claude's input prompt is on screen. A new worktree's on_create hook may
 # install dependencies first, so allow a few minutes.
 ready=""
 for _ in $(seq 1 100); do
@@ -75,14 +77,6 @@ done
 aoe send "$title" "$msg" >/dev/null
 
 wt="$(aoe session show "$title" --json | field path)"
-if [ "$kind" = build ] && [ -f "$dir/plan.md" ]; then
-  python3 -I - "$dir/plan.md" "$wt" <<'EOF'
-import pathlib, re, sys
-p = pathlib.Path(sys.argv[1])
-p.write_text(re.sub(r"^worktree:.*$", f"worktree: {sys.argv[2]}", p.read_text(), count=1, flags=re.M))
-EOF
-fi
-
 echo "started  $title"
 echo "path     $wt"
 echo "attach   aoe session attach $title"

@@ -14,12 +14,9 @@ Load the `flow` skill and `craft:principles` first.
 ## Start
 
 1. Read `DIR/plan.md`. Set `stage: building` and colour amber.
-2. If the branch is still the bare `<slug>`, rename it to `<type>/<slug>`
-   (`feat`, `fix`, `chore` — from the ticket) with `git branch -m`, and update
-   the plan's `branch:` line.
-3. If `proto:` names a branch, read its diff; port the parts the verdict kept,
+2. If `proto:` names a branch, read its diff; port the parts the verdict kept,
    rewritten to production standard. Never merge the proto branch.
-4. Start at the first phase with unticked tasks.
+3. Start at the first phase with unticked tasks.
 
 ## Each phase
 

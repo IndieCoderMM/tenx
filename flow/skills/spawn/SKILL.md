@@ -9,7 +9,7 @@ disable-model-invocation: true
 Start a work session and get woken when it stops.
 
 Load the `flow` skill first and read `references/aoe.md`. Runs in HQ, from the
-repo's main checkout.
+feature worktree (proto may also run from the main checkout).
 
 Arguments: `build|review|proto <slug> [...]`.
 

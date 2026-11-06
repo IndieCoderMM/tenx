@@ -24,7 +24,8 @@ it, this is a re-shape — propose the exact changes and write only after approv
 3. **Decide.** Ask the implementation questions the ticket leaves open, at most 5
    numbered per round, each with your recommendation. Skip anything with a
    clear default in the codebase — state the default instead.
-4. **Write `plan.md`** from the template: header (`stage: shaped`, `model`),
+4. **Write `plan.md`** from the template: header (`stage: shaped`, `model`, and
+   `branch`/`worktree` from git — HQ's current branch and directory),
    Goal from the ticket, numbered Decisions, Phases. Every phase gets a `Test:`
    line; mark `⏸` where the build must stop for the user.
 5. **Show** the Goal, Decisions, and phase names with their Test lines — not the

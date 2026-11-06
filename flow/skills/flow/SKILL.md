@@ -5,8 +5,9 @@ description: Core rules for the flow workflow — HQ session plus aoe work sessi
 
 # Flow
 
-One **HQ** session talks with the user and orchestrates. **Work sessions** run in
-aoe (tmux), each in its own directory, and do the hands-on work. They share state
+One **HQ** session per feature talks with the user and orchestrates. It runs in
+the feature's worktree, which the user creates as usual. **Work sessions** run in
+aoe (tmux) in that same worktree and do the hands-on work. They share state
 through one file per feature: `plan.md`.
 
 ## The loop
@@ -24,15 +25,18 @@ HQ    /flow:board — status of every work session, any time
 
 | Session | aoe title | Directory | Writes |
 |---|---|---|---|
-| HQ | (any) | repo main checkout | `plan.md` (all but the sections below), tickets |
-| build | `build-<slug>` | worktree `<repo>-worktrees/build-<slug>` | code, commits, phase ticks, `Resume`, `stage` |
-| review | `review-<slug>` | same worktree as build | `## Review` only — never code |
-| proto | `proto-<slug>` | worktree `<repo>-worktrees/proto-<slug>` (route) or main checkout (file) | prototype, `proto/verdict.md` |
+| HQ | (any) | the feature worktree | `plan.md` (all but the sections below), tickets |
+| build | `build-<slug>` | HQ's worktree | code, commits, phase ticks, `Resume`, `stage` |
+| review | `review-<slug>` | HQ's worktree | `## Review` only — never code |
+| proto | `proto-<slug>` | own worktree `<repo>-worktrees/proto-<slug>` (route) or HQ's directory (file) | prototype, `proto/verdict.md` |
 
-- HQ never edits project files. It reads code through an Explore subagent so
-  file dumps stay out of its context.
-- One session writes code per worktree. Parallel work happens across features,
-  never inside one.
+- HQ never edits project files or runs git writes, even though it shares the
+  worktree. It reads code through an Explore subagent so file dumps stay out of
+  its context.
+- Only the build session writes code in a worktree. Parallel work happens across
+  features (one HQ each), never inside one.
+- `/flow:ideate` may run anywhere, including the main checkout. Build and review
+  need HQ in a feature worktree.
 
 ## Files
 

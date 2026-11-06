@@ -8,7 +8,7 @@
 stage: shaped | building | reviewing | shipped
 ticket: <url>
 branch: <name>
-worktree: <path, filled by flow-spawn>
+worktree: <HQ's worktree path>
 model: opus | sonnet
 proto: <branch or file> — <one-line verdict, or —>
 
@@ -46,7 +46,6 @@ proto: <branch or file> — <one-line verdict, or —>
 |---|---|---|
 | header, Goal, Decisions, Phases | `/flow:shape` | Rewritten only by `/flow:shape` again, after the user approves the change |
 | `stage` | shape → `shaped`, build → `building`, review → `reviewing`, ship → `shipped` | |
-| `worktree` | `flow-spawn` | |
 | phase ticks, `Resume` | `/flow:build` | Ticks only; never edits task text |
 | `## Review` | `/flow:review` | Build session marks items `fixed` or `skipped`, never deletes them |
 

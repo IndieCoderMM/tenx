@@ -30,4 +30,4 @@ Load the `flow` skill first.
 - Never mention `plan.md` or flow in the PR or ticket.
 - A failing check blocks the push — fix it in `/flow:build` or ask.
 
-Next: after merge, `aoe remove build-<slug> --delete-worktree`
+Next: after merge, `aoe remove build-<slug>` and `aoe remove review-<slug>`

@@ -5,7 +5,8 @@ on `PATH` — call them by bare name.
 
 ## Spawn — `flow-spawn`
 
-Run from the repo's main checkout (HQ's directory).
+Run from HQ's directory — the feature worktree. Build and review refuse to start
+in the main checkout.
 
 ```bash
 flow-spawn build  <slug> [--model sonnet]
@@ -13,17 +14,16 @@ flow-spawn review <slug>
 flow-spawn proto  <slug> route|file "<the question the prototype answers>"
 ```
 
-It creates the aoe session (worktree, group, parent = HQ when HQ runs inside aoe),
-starts Claude in auto mode, waits until the prompt is ready, sends the first
-command, writes `worktree:` into `plan.md` for build, and prints the title and the
-attach command.
+It creates the aoe session (parent = HQ when HQ runs inside aoe), starts Claude in
+auto mode, waits until the prompt is ready, sends the first command, and prints
+the title and the attach command.
 
 | Kind | Title | Directory |
 |---|---|---|
-| build | `build-<slug>` | new worktree `<repo>-worktrees/build-<slug>`, branch `<slug>` |
-| review | `review-<slug>` | the build session's worktree |
+| build | `build-<slug>` | HQ's worktree |
+| review | `review-<slug>` | HQ's worktree |
 | proto route | `proto-<slug>` | new worktree `<repo>-worktrees/proto-<slug>`, branch `<slug>-proto` |
-| proto file | `proto-<slug>` | main checkout, with `DIR` added as a writable dir |
+| proto file | `proto-<slug>` | HQ's directory, with `DIR` added as a writable dir |
 
 Exit code 3 means the session hit a trust dialog or never became ready — tell the
 user to attach and check.
@@ -67,6 +67,7 @@ aoe session color "$(aoe session current -q)" green   # done
 
 ## Clean up
 
-After the PR merges: `aoe remove build-<slug> --delete-worktree`, and the same for
-`review-<slug>` and `proto-<slug>`. The local proto branch is kept (aoe does not
-delete branches) so `/flow:build` can port from it.
+After the PR merges: `aoe remove build-<slug>` and `aoe remove review-<slug>`
+(sessions only — the feature worktree is HQ's, removed the usual way).
+`aoe remove proto-<slug> --delete-worktree` removes the prototype worktree; the
+local proto branch is kept (aoe does not delete branches).

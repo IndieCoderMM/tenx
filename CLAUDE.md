@@ -48,7 +48,7 @@ A personal technical tutor for learning topics in depth — general technical kn
 
 ## The flow plugin
 
-Flow (v2) splits work between one **HQ** session and **aoe work sessions**. HQ runs `/flow:ideate` (discussion → prototype → ticket), `/flow:shape` (ticket → `plan.md`), `/flow:spawn` and `/flow:board`. Work sessions run `/flow:proto`, `/flow:build`, `/flow:review` and `/flow:ship`. One file per feature, `~/.tenx/flow/<repo>/<slug>/plan.md`, carries the state between them. v1 (contract/tasks/qa/logs, nine commands) is archived in `archive/flow-v1/`; `link.sh` and CI skip it.
+Flow (v2) splits work between one **HQ** session per feature, started in the feature's worktree, and **aoe work sessions** spawned into that same worktree. HQ runs `/flow:ideate` (discussion → prototype → ticket), `/flow:shape` (ticket → `plan.md`), `/flow:spawn` and `/flow:board`. Work sessions run `/flow:proto`, `/flow:build`, `/flow:review` and `/flow:ship`. One file per feature, `~/.tenx/flow/<repo>/<slug>/plan.md`, carries the state between them. v1 (contract/tasks/qa/logs, nine commands) is archived in `archive/flow-v1/`; `link.sh` and CI skip it.
 
 Design rules to preserve when editing flow:
 
