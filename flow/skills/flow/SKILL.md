@@ -1,72 +1,78 @@
 ---
 name: flow
-description: Structured workflow for agentic coding tasks. Load before running any flow command.
+description: Core rules for the flow workflow — HQ session plus aoe work sessions sharing one plan.md per feature. Load before running any flow command.
 ---
 
 # Flow
 
-**Flow** stack is a set of skills designed for effective ADLC workflow which involves 5 phases: 
-- intent - the contract layer
-- build - the creation layer
-- validate - the verification layer
-- govern - the human judgment layer
-- ship - the release layer
+One **HQ** session talks with the user and orchestrates. **Work sessions** run in
+aoe (tmux), each in its own directory, and do the hands-on work. They share state
+through one file per feature: `plan.md`.
 
-##  Flow docs
-
-`DIR=~/.tenx/flow`
-
-Flow docs are context files written under `DIR` directory. These docs are designed to prevent the failure modes of normal agentic coding: context lost between sessions so each one re-derives the task from scratch, scope creep mid-build, decisions silently reversed or relitigated, "done" claims nobody can check, and review feedback that evaporates instead of becoming tracked work. Only a flow skill's own invocation writes to these files.
-
-### Folder schema
+## The loop
 
 ```
-<repo-name>/<slug>/
-├── contract.md   # problem, done-when, domain, invariants
-├── tasks.md      # approach, phases of build-ready tasks, iterations
-├── qa.md         # manual QA steps
-└── logs.tsv      # append-only decision log
+HQ    /flow:ideate  → (optional) /flow:spawn proto → ticket via dispatch:issue
+HQ    /flow:shape <ticket> → plan.md → user says go
+HQ    /flow:spawn build → work session runs /flow:build
+HQ    /flow:spawn review → work session runs /flow:review → user picks fixes
+HQ    relays "fix N, M" and "/flow:ship" to the build session with `aoe send`
+HQ    /flow:board — status of every work session, any time
 ```
 
-Full templates, section caps, and the verbatim rules are in `references/schema.md`, beside this file. 
-**Read it before writing docs.**
+## Roles
 
-`logs.tsv` rules and the `flow-log` command are in `references/logging.md`, beside this file. 
-**Read it before writing a log row or resuming a task.**
+| Session | aoe title | Directory | Writes |
+|---|---|---|---|
+| HQ | (any) | repo main checkout | `plan.md` (all but the sections below), tickets |
+| build | `build-<slug>` | worktree `<repo>-worktrees/build-<slug>` | code, commits, phase ticks, `Resume`, `stage` |
+| review | `review-<slug>` | same worktree as build | `## Review` only — never code |
+| proto | `proto-<slug>` | worktree `<repo>-worktrees/proto-<slug>` (route) or main checkout (file) | prototype, `proto/verdict.md` |
 
-### Resolving `<slug>`
+- HQ never edits project files. It reads code through an Explore subagent so
+  file dumps stay out of its context.
+- One session writes code per worktree. Parallel work happens across features,
+  never inside one.
 
-Every skill takes an optional slug as its first argument. When omitted, resolve
-in this order:
+## Files
 
-1. A folder under `DIR` whose name appears in the current git branch.
-2. The most recently modified folder whose `stage:` is not `archived`.
+`DIR=~/.tenx/flow/<repo>/<slug>/` where `<repo>` is the main checkout's folder name.
+
+```
+plan.md            # the feature's single source of truth
+proto/             # prototype files, screenshots, verdict.md
+shots/             # build screenshots
+```
+
+Template and writer rules: `references/plan.md`. **Read it before writing plan.md.**
+aoe commands and helper scripts: `references/aoe.md`. **Read it before spawning,
+relaying, or waiting.**
+
+These files are local only. Never commit them or mention them in a PR or ticket.
+
+## Resolving `<slug>`
+
+Slugs are kebab-case, prefixed with the ticket id once one exists (`cc-301-bulk-export`).
+When omitted:
+
+1. In a work session: the aoe title (`build-<slug>`), else the worktree folder name.
+2. In HQ: the most recently modified `DIR` folder containing `plan.md` whose
+   `stage` is not `shipped`.
 3. Otherwise list the candidates and ask.
 
-Slugs are kebab-case, prefixed with the issue number when one exists (`123-chat-backend`), otherwise a short descriptive slug (`layout-cap-audit`).
+Folders without `plan.md` (flow v1 tasks) are ignored.
 
-## The flow
+## When a background wait returns (HQ)
 
-1. `/brainstorm` - Discuss the problem, form a hypothesis, and writes `contract.md`.
-2. `/architect` - Decisions + phase split + tasks breakdown → `tasks.md`.
-3. `/execute <phase>` - Implement the solution per phase (can span multiple cycles based on review feedback).
-4. `/review <phase>` - Light pass, this phase's diff only.
-5. `/checkpoint <phase>` - User accept: commit, update tasklist and logs.
-6. `/validate <phase>` - Deep agent pass over the full branch: contract, business logic, quality.
-7. `/verify <phase>` - Generate QA test cases with checkboxes for manual pass -> `qa.md`.
-8. `/iterate` - Append iteration phases into `tasks.md` for required changes.  
-9. `/ship` - Format, lint, clean up, open PR.
+`flow-wait` exits when a work session stops running. Then:
 
-Out of band, at any stage:
+1. Read that feature's `plan.md` (`Resume`, `## Review`, or `proto/verdict.md`).
+2. Report in at most 5 lines: what finished, what needs the user, and
+   `aoe session attach <title>` when they should look themselves.
+3. If the session is `waiting` on a question, show the question; relay the
+   user's answer with `aoe send`.
 
-- `/revise` - The target moved. Rewrite `contract.md` and log the reversal.
+## Reports
 
-Every command but `/ship` ends its report with exactly one line:
-`Next: /<command> <slug>`. Name the command that applies; join alternatives
-with `|` only when the choice is the user's.
-
-## Related skills
-
-- `craft:unslop` — apply to every message that must land clearly with the user: design questions, proposals, report templates.
-
-Each flow skill may name further related skills. If one is not installed, do not block — continue without it and note `skill <name> not found` in the report.
+Every command ends with one line: `Next: /flow:<command> <slug>` — or the user's
+choice, joined with `|`. Write user-facing text through `craft:unslop`.

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Block until an aoe session stops running, then print its status and pane tail.
+#
+#   flow-wait <title>
+#
+# Run it in the background right after a spawn or `aoe send`: it first gives the
+# session up to a minute to start running, so it does not exit on the idle state
+# that precedes the work.
+set -euo pipefail
+
+title="${1:?usage: flow-wait <title>}"
+status() {
+  aoe session show "$title" --json 2>/dev/null \
+    | python3 -I -c "import json,sys;print(json.load(sys.stdin).get('status','unknown'))" \
+    || echo gone
+}
+
+for _ in $(seq 1 12); do
+  [ "$(status)" = running ] && break
+  sleep 5
+done
+
+while :; do
+  s="$(status)"
+  case "$s" in
+    running|starting) sleep 15 ;;
+    *) break ;;
+  esac
+done
+
+echo "$title: $s"
+aoe session capture "$title" -n 25 --strip-ansi 2>/dev/null | grep -v '^[[:space:]]*$' | tail -12 || true

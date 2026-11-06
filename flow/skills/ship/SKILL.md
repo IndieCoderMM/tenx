@@ -1,37 +1,33 @@
 ---
 name: ship
-description: Close out a flow task — final cleanup, open the PR, mark shipped.
+description: Work session — final checks, push, open the PR, and update the ticket for a built and reviewed feature.
 disable-model-invocation: true
 ---
 
 # Ship
 
-The release step. Clean up, open the PR, close the task out.
+Run in the build session, usually relayed from HQ as `/flow:ship`. Being asked to
+ship is the approval to push.
 
 Load the `flow` skill first.
 
 ## Steps
 
-1. **Gate.** Resolve the slug. Tick each Done when box whose
-   `qa.md` cases are all human-ticked — only ship ticks these. Done when boxes
-   still unticked or open iteration items mean the task is not ready — report
-   what is left and stop unless the user overrides.
-2. **Clean.** Format, lint, and sweep the branch for debris (debug output,
-   stray TODOs, dead code from reversed approaches). Run the project's full
-   checks. Commit any cleanup with `dispatch:commit`.
-3. **PR.** Invoke `dispatch:pr` to draft and open the PR from the branch
-   diff. Write the PR url into `contract.md`'s `pr:` field.
-4. **Close.** Set `stage: shipped` and log a `note` row with the PR url as
-   `--ref`.
+1. **Gate.** Every phase ticked, and every `## Review` item marked fixed or
+   skipped. If not, list what is left and stop unless the user overrides.
+2. **Clean.** Format, lint, and run the project's full test command. Sweep the
+   diff for debris: debug output, stray TODOs, dead code from abandoned
+   approaches. Commit cleanup with `dispatch:commit` (deletion and formatting
+   only — behavior changes go back to `/flow:build`).
+3. **Push** with upstream set.
+4. **PR.** `dispatch:pr`. Its how-to-test comes from the phases' Test lines.
+5. **Ticket.** Link the PR on the ticket and move it to the team's review state
+   if it has one.
+6. **Close.** `stage: shipped`, Resume `shipped · <pr url>`, colour green.
 
 ## Rules
 
-- Never open the PR before the gate passes or the user overrides it.
-- Cleanup is deletion and formatting only — behavior changes go through
-  `/iterate`.
-- Never reference flow docs in the PR — they are local-only.
+- Never mention `plan.md` or flow in the PR or ticket.
+- A failing check blocks the push — fix it in `/flow:build` or ask.
 
-## Related skills
-
-- `dispatch:pr` — drafts and opens the PR.
-- `dispatch:commit` — the cleanup commit.
+Next: after merge, `aoe remove build-<slug> --delete-worktree`

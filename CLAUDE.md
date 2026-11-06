@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Tenx is a collection of Claude Code plugins (skills) for the agentic development lifecycle (ADLC), curated from the author's workflow. Each top-level directory containing `.claude-plugin/plugin.json` is one plugin. Currently: `flow` (task lifecycle), `adlc` (approval-gated feature lifecycle), `craft` (how code and prose get written and verified), `dispatch` (what gets published for others to read), `retro` (weekly review of the workflow itself), and `tutor` (learning technical topics in depth).
+Tenx is a collection of Claude Code plugins (skills) for the agentic development lifecycle (ADLC), curated from the author's workflow. Each top-level directory containing `.claude-plugin/plugin.json` is one plugin. Currently: `flow` (HQ + aoe work sessions, idea to PR), `adlc` (approval-gated feature lifecycle), `craft` (how code and prose get written and verified), `dispatch` (what gets published for others to read), `retro` (weekly review of the workflow itself), and `tutor` (learning technical topics in depth).
 
 ## Commands
 
@@ -48,14 +48,14 @@ A personal technical tutor for learning topics in depth — general technical kn
 
 ## The flow plugin
 
-Flow defines a 5-phase ADLC workflow (intent → build → validate → govern → ship) driven by slash commands (`/brainstorm`, `/architect`, `/execute`, `/review`, `/checkpoint`, `/validate`, `/verify`, `/iterate`, `/ship`). Per-task state lives in a task folder (`contract.md`, `tasks.md`, `qa.md`, `logs.tsv`) under `~/.tenx/flow/<repo>/<slug>/`.
+Flow (v2) splits work between one **HQ** session and **aoe work sessions**. HQ runs `/flow:ideate` (discussion → prototype → ticket), `/flow:shape` (ticket → `plan.md`), `/flow:spawn` and `/flow:board`. Work sessions run `/flow:proto`, `/flow:build`, `/flow:review` and `/flow:ship`. One file per feature, `~/.tenx/flow/<repo>/<slug>/plan.md`, carries the state between them. v1 (contract/tasks/qa/logs, nine commands) is archived in `archive/flow-v1/`; `link.sh` and CI skip it.
 
 Design rules to preserve when editing flow:
 
-- **Single-writer ownership**: each doc section is written by exactly one command (e.g. `Problem`/`Done when` by `brainstorm`, phases by `architect`, ticks by `checkpoint`, `qa.md` by `verify`). `references/schema.md` is the authority — keep it and SKILL.md consistent.
-- **`logs.tsv` is append-only** and written only through `bin/flow-log` (closed kind vocabulary, TSV-safe cleaning, 120-char summary cap). Never let skill prose suggest hand-writing rows. `CLAUDE_PLUGIN_ROOT` is not exported to Bash, so skills must never invoke helpers by path — that is why the script lives in `bin/`.
-- **Agent effort is per definition, not per call**: the Agent tool overrides only `model`, so a pass needing different `effort:` needs its own agent file (`flow-reviewer` medium vs `flow-validator` high).
-- Resume precedence when sources disagree: `logs.tsv` → `tasks.md` → `contract.md` → git (documented in `references/logging.md`).
+- **Single writer per section** of `plan.md`; `skills/flow/references/plan.md` is the authority — keep it and the skills consistent.
+- **One code writer per worktree.** Review and HQ never edit code. Parallelism is across features only.
+- **HQ stays light**: it reads code only through Explore subagents and learns about work sessions from `plan.md` and `flow-wait`, never by polling.
+- **aoe mechanics live in `bin/`** (`flow-spawn`, `flow-wait`, `flow-board`), not in skill prose. `CLAUDE_PLUGIN_ROOT` is not exported to Bash, so skills call them by bare name. aoe names a new worktree's directory after the session title, and `-P <parent>` overrides `-g`; derive the repo from git, never from the aoe group.
 
 ## The ADLC plugin
 

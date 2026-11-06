@@ -43,12 +43,16 @@ genuinely aids scanning, never for 2-3 criteria.>
 - [ ] <one behavior per box, concrete enough to demo>
 - [ ] <includes the failure/edge behavior that matters, not just happy path>
 
-## Out of scope
+## Prototype
 
-<1-3 lines of what this slice deliberately doesn't cover.>
+<1-2 lines: the question a prototype answered and its verdict.>
+
+## Follow up
+
+<1-3 lines naming the next slice, as what it will do. Link the issue when it exists.>
 ```
 
-`Why` and `Out of scope` are optional — drop the heading entirely when there's nothing to say.
+`Why`, `Prototype`, and `Follow up` are optional — drop the heading entirely when there's nothing to say.
 
 ## Writing rules
 
@@ -58,3 +62,4 @@ genuinely aids scanning, never for 2-3 criteria.>
 - Group headings are short area names ("**Editor**", "**Sync**"), not sentences.
 - Describe end-to-end behavior, never layer-by-layer implementation. No file paths, no code snippets.
 - Never reference local plan or quest files.
+- Short, direct sentences. State what the slice does, not what it doesn't — no lists of exclusions or caveats.
