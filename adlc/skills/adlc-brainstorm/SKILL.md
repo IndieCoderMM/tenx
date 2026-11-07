@@ -18,6 +18,8 @@ a discovery conversation, not a coding or architecture-design phase.
 3. Identify the user problem, primary scenario, desired outcome, constraints, and likely edge cases.
 4. Ask focused questions where the answer changes product behavior or scope. Do not interrogate the
    user about details that can safely be decided later.
+   Use `adlc-interview` in discovery mode when a meaningful decision remains unresolved; skip it for
+   routine clarifications or when the user's intent is already clear.
 5. Offer alternatives when there are genuinely different product directions. Explain trade-offs in
    plain language.
 6. Challenge assumptions respectfully. Separate facts from guesses and label unresolved assumptions.

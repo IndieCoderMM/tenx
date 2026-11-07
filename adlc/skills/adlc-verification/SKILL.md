@@ -12,6 +12,12 @@ green tests alone are insufficient.
 
 ## Verification process
 
+For features where an independent pass improves confidence, delegate an acceptance-criteria review
+to `adlc-verifier`, providing the change folder and implementation scope. If the host does not load
+Tenx agent definitions but supports subagents, use `../../agents/adlc-verifier.md` as the role brief;
+do not assume its frontmatter tool permissions are enforced. Verify directly when delegation adds
+no value or is unavailable. The coordinator checks the reported evidence and owns `verification.md`.
+
 1. Read the approved brief and acceptance criteria.
 2. Read the final design and task plan, including recorded deviations.
 3. Inspect the final diff and Git status.

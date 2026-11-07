@@ -30,6 +30,10 @@ blocking defects.
 
 ## Review method
 
+- Delegate a focused read-only pass to `adlc-reviewer`, providing the approved artifacts and diff
+  scope. If the host does not load Tenx agent definitions but supports subagents, use
+  `../../agents/adlc-reviewer.md` as the role brief; do not assume its frontmatter tool permissions
+  are enforced. If delegation is unavailable, review directly.
 - Trace changed behavior through callers and consumers.
 - Check boundary conditions and failure paths.
 - Check whether tests cover the highest-risk behavior; do not demand tests for every code path.
@@ -46,8 +50,9 @@ For each finding include:
 - **Impact:** concrete consequence.
 - **Suggested direction:** minimal corrective approach.
 
-Only report findings that are actionable and grounded in the diff. If no findings are identified,
-say so and state the scope reviewed; do not imply the change is defect-free.
+Check each agent finding against the code before reporting it. Only report findings that are
+actionable and grounded in the diff. If no findings are identified, say so and state the scope
+reviewed; do not imply the change is defect-free.
 
 ## Boundaries
 

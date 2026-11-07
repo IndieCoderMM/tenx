@@ -1,8 +1,8 @@
 # Architecture overview
 
-Tenx is a repository of agent workflow plugins. Each plugin lives in a top-level directory and is discovered through `.claude-plugin/plugin.json`. Skills live under `skills/<name>/SKILL.md`; larger references and helper programs stay with the plugin that uses them.
+Tenx is a repository of agent workflow plugins. Each plugin lives in a top-level directory and is discovered through `.claude-plugin/plugin.json`. Skills live under `skills/<name>/SKILL.md`; optional agents live under `agents/<name>.md`. Larger references and helper programs stay with the plugin that uses them.
 
-`link.sh` scans those plugin directories and creates user-level symlinks for Claude Code and Codex. It exposes plugin directories to Claude Code and individual skill directories to Codex.
+`link.sh` scans those plugin directories and creates user-level symlinks for Claude Code and Codex. It exposes plugin directories to Claude Code and individual skill directories to Codex; it does not currently register agent definitions with Codex.
 
 Workflow state has plugin-specific ownership:
 

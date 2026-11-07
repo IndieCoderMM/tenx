@@ -32,7 +32,7 @@ SKILL.md is kept short; anything with templates, caps, or verbatim rules lives i
 
 ## The craft plugin
 
-Cross-cutting standards, loaded by name rather than auto-triggered. `principles` is the always-on core — `flow-builder` and `flow-reviewer` load it first. `proof` (manual verification cases), `recover` (failure diagnosis), `navigator` (guided implementation), `unslop` (prose cleanup), `prompt` (system prompt review and rewrite), and `size` (sizes a task XS to XL from the files it really touches, never in hours or days) load on trigger. Skills here are curated forks, not vendored copies: rewrite them to match these preferences rather than tracking an upstream.
+Cross-cutting standards, loaded by name rather than auto-triggered. `principles` is the always-on core — `flow-builder` and `flow-reviewer` load it first. `proof` (manual verification cases), `recover` (failure diagnosis), `navigator` (guided implementation), `unslop` (prose cleanup), `prompt` (system prompt review and rewrite), `vet` (anti-sycophantic validation of a raw idea, with a cold-read subagent that never sees the pitch), and `size` (sizes a task XS to XL from the files it really touches, never in hours or days) load on trigger. Skills here are curated forks, not vendored copies: rewrite them to match these preferences rather than tracking an upstream.
 
 ## The dispatch plugin
 

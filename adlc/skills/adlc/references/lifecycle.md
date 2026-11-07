@@ -22,6 +22,14 @@ engineering work within approved boundaries.
 
 ## Lifecycle and gates
 
+### Cross-phase interviews
+
+`adlc-interview` is a complementary skill, not a lifecycle phase, artifact, or approval gate. Use it
+only when an unresolved decision could change scope, user-visible behavior, architecture, the approved
+plan, or whether work can safely continue. Investigate first, ask one focused question at a time, and
+leave routine reversible details to the coordinator. The phase owner records the decision in its
+existing artifact.
+
 ### Phase 1 — Discover
 
 Invoke `adlc-brainstorm`.
@@ -31,6 +39,8 @@ Invoke `adlc-brainstorm`.
 - Ask focused questions only where the answer changes scope, user experience, constraints, or
   architecture. Prefer one high-value question at a time.
 - Distinguish confirmed facts, assumptions, options, and unresolved questions.
+- Use `adlc-interview` in discovery mode when a meaningful question about the problem, outcome, or
+  scope remains. Skip it when the brief is clear or only routine details remain.
 - Create or update `.adlc/changes/<slug>/brief.md`.
 - Do not create a technical implementation plan yet.
 
@@ -44,6 +54,8 @@ Invoke `adlc-architecture`.
 - Inspect the current architecture before proposing new patterns.
 - Prefer the smallest design that fits the approved requirements and existing conventions.
 - Discuss meaningful alternatives and trade-offs; do not turn every local coding choice into an ADR.
+- Use `adlc-interview` in architecture mode when a consequential choice still needs the user's
+  judgment. Follow approved decisions and project conventions for routine choices.
 - Record durable or expensive-to-reverse decisions in `.adlc/architecture/decisions/ADR-NNN-*.md`.
 - Create/update `.adlc/changes/<slug>/design.md`.
 - Update `.adlc/architecture/overview.md` only if the system-level architecture actually changes.
@@ -59,6 +71,8 @@ failure behavior, and acceptance criteria.
 
 - Keep product behavior separate from implementation mechanics.
 - Use scenarios when they remove ambiguity; avoid bloated formalism.
+- Use `adlc-interview` in specification mode when ambiguous behavior could lead to materially
+  different user-visible outcomes.
 - Identify affected current capabilities under `.adlc/specs/<capability>/spec.md`.
 - Proposed behavior belongs in the change folder until delivered.
 
@@ -75,6 +89,8 @@ Invoke `adlc-writing-plans`.
 - Prefer small coherent tasks that can be reviewed independently.
 - Include integration, migration, accessibility, security, and documentation work only when relevant.
 - Identify what is deliberately deferred.
+- Use `adlc-interview` in planning mode when a real scope, sequencing, dependency, or deferral choice
+  needs the user's input. The normal plan approval gate still applies.
 
 **Gate P:** Get approval for the task plan and sequencing before implementation. Small wording changes
 or obvious task clarifications do not require repeated approval; scope or architectural changes do.
@@ -93,7 +109,8 @@ Invoke `adlc-executing-plans`, which coordinates `adlc-pragmatic-testing`.
 - Review the diff for scope, correctness, regressions, and accidental changes.
 - Update task status and progress log immediately after verified completion.
 - If implementation reveals a requirement/design conflict, stop at a safe boundary, explain the
-  evidence, propose options, and update artifacts only after agreement.
+  evidence, use `adlc-interview` in implementation mode to resolve the decision, and update artifacts
+  only after agreement. Continue independent work that remains safe and within scope.
 
 **Implementation autonomy:** Once gates D, A, S, and P are satisfied, proceed without asking for
 approval after every edit. Pause for material scope changes, destructive actions, uncertain data

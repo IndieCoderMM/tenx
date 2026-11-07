@@ -24,6 +24,7 @@ adlc-skill-bundle/
 └── skills/
     ├── adlc/SKILL.md
     ├── adlc-brainstorm/SKILL.md
+    ├── adlc-interview/SKILL.md
     ├── adlc-architecture/SKILL.md
     ├── adlc-writing-plans/SKILL.md
     ├── adlc-executing-plans/SKILL.md
@@ -72,6 +73,17 @@ Do not delete the change folder after completion.
 
 Use `adlc` as the entry point. It routes to the focused skills when needed. The subskills can also
 be invoked directly, but they must follow the same artifact conventions and quality principles.
+`adlc-interview` is an optional cross-phase skill for decisions that need user input. It does not add
+a lifecycle phase or artifact.
+
+## Agent roles
+
+The optional `agents/` definitions provide bounded builder, reviewer, and verifier roles. Use them
+when the host loads Tenx agent definitions. If the host supports subagents but does not load these
+definitions, use the corresponding file as the role brief; do not assume its frontmatter tool
+permissions are enforced. If delegation is unavailable or adds no value, do the work directly
+within the same scope and ownership rules. The coordinator remains responsible for approvals,
+integration, and `.adlc/` records.
 
 ## Design choices
 

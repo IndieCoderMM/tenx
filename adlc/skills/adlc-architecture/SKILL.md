@@ -31,6 +31,9 @@ Do not perform a broad codebase rewrite or produce a file-by-file inventory.
 6. Identify migration, rollout, failure, security/privacy, and operational concerns when relevant.
 7. Define what is intentionally deferred.
 
+Use `adlc-interview` in architecture mode when a consequential choice still requires the user's
+judgment. Follow approved decisions and existing conventions for routine implementation choices.
+
 ## ADR policy
 
 Create an ADR only when a decision is:

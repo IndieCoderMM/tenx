@@ -16,17 +16,33 @@ Implement an approved plan with controlled autonomy, small diffs, and reliable p
 3. Inspect the relevant code and tests; confirm the planned approach still fits.
 4. Confirm dependencies and acceptance conditions for this task.
 
+## Agent delegation
+
+Use `adlc-builder` when a bounded task benefits from a separate implementation pass. Provide the
+change-folder path, task ID, approved file or component boundaries, dependencies, and verification
+conditions. If the host does not load Tenx agent definitions but supports subagents, use
+`../../agents/adlc-builder.md` as the role brief; do not assume its frontmatter tool permissions are
+enforced. The builder must not edit `.adlc/` artifacts; the coordinator owns them and checks the
+builder's diff and reported command output. Handle trivial tasks directly when delegation adds no
+value or delegation is unavailable.
+
+Assign separate builder agents only to tasks whose dependencies are complete and whose file or
+component boundaries do not overlap. Keep dependent or shared-file tasks sequential. If the agent is
+unavailable, implement the task directly under the same scope rules.
+
 ## Execution loop
 
 For each task:
 1. State the task outcome briefly.
-2. Make the smallest coherent implementation that satisfies it.
+2. Delegate the task to `adlc-builder` when useful, or make the smallest coherent implementation
+   directly when delegation adds no value or the agent is unavailable.
 3. Follow established project patterns and approved design decisions.
 4. Use `adlc-pragmatic-testing` to choose proportionate checks.
 5. Run the selected checks and inspect their actual output.
 6. Review the diff for scope, correctness, regressions, accidental formatting churn, and secrets.
 7. If appropriate, request a focused review using `adlc-code-review`.
-8. Update the task checkbox and progress log only after verification.
+8. The coordinator updates the task checkbox and progress log only after checking the diff and
+   verification evidence.
 9. Summarize what changed, checks run, and any remaining concern.
 
 ## Scope control
@@ -35,9 +51,11 @@ For each task:
 - Do not opportunistically refactor unrelated code.
 - Do not add dependencies without a clear need and user approval when material.
 - Do not change accepted product behavior or architecture silently.
-- If the plan is invalidated by new evidence, pause at a safe boundary, explain the issue, and propose
-  a plan update.
-- If a task reveals a consequential new decision, return to architecture approval before proceeding.
+- If new evidence invalidates the plan or exposes a meaningful decision the approved artifacts do
+  not resolve, pause affected work and use `adlc-interview` in implementation mode. Return to the
+  appropriate approval gate before changing scope or design, then update the plan when needed.
+  Continue independent work that remains safe and within scope. Handle ordinary implementation
+  details using project conventions.
 
 ## Autonomy
 

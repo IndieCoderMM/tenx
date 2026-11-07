@@ -29,6 +29,11 @@ ADLC phase rather than inventing an answer.
 - Include migration, accessibility, security, documentation, and observability tasks only when
   applicable.
 - Identify prerequisites and critical sequencing.
+- When parallel implementation could help, define disjoint file or component boundaries and task
+  dependencies. Do not split work just to create more parallel tasks.
+- Use `adlc-interview` in planning mode when the plan exposes a meaningful scope, sequencing,
+  dependency, or deferral choice. The usual plan approval still applies; do not ask separately about
+  every task detail.
 - Mark deferred ideas explicitly rather than hiding them in implementation.
 - Avoid specifying exact line numbers; they become stale.
 - Do not prescribe implementation details already left intentionally open by the design.
