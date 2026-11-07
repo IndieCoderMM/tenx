@@ -10,6 +10,7 @@ ticket: <url>
 branch: <name>
 worktree: <HQ's worktree path>
 model: opus | sonnet
+size: <XS-XL> <bar> — <driver, from craft:size>
 proto: <branch or file> — <one-line verdict, or —>
 
 ## Goal

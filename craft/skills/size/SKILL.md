@@ -42,11 +42,22 @@ Bump one size for each, at most two:
 
 ## Report
 
+Exactly four lines, each one terminal line. No lists, no paragraphs.
+
 ```
-<size> - <n> files across <layers>
-↑ <each bump, with the fact behind it>
-checks: <n> (<what the user must look at by hand>)
+M ■■■□□  9 files · 3 layers
+where    routes/clips (4), server/clips (3), packages/db (2)
+driver   wider than it looks: ClipMeta type changes, 14 callers
+checks   2 · new column shows in clip list · migration runs clean
 ```
 
-Add one line only when it changes the decision: a cheaper cut of the same
-task ("the S version: skip X"), or the assumption from step 1.
+- Bar: XS `■□□□□`, S `■■□□□`, M `■■■□□`, L `■■■■□`, XL `■■■■■`.
+- `where`: file paths when 3 or fewer, else folders with counts.
+- `driver`: the single biggest reason for the size, with the fact behind it.
+  Start with `wider than it looks:` when the footprint beats the task's
+  wording.
+- `checks`: how many things the user must look at by hand, then each in a few
+  words.
+
+A fifth line only when two readings of the task would size differently:
+`assumed  <reading>; <other reading> would be <size>`.

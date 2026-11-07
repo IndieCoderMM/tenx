@@ -20,16 +20,18 @@ it, this is a re-shape — propose the exact changes and write only after approv
    exists, read it; the prototype's winning variant is a given.
 2. **Map.** Send one Explore subagent to find where the change lands: files,
    existing patterns to reuse, tests that cover the area, how to run the app to
-   see it. Use its conclusions; never read files into HQ.
+   see it, and the counts `craft:size` needs (files, callers of changed
+   symbols, layers). Use its conclusions; never read files into HQ.
 3. **Decide.** Ask the implementation questions the ticket leaves open, at most 5
    numbered per round, each with your recommendation. Skip anything with a
    clear default in the codebase — state the default instead.
-4. **Write `plan.md`** from the template: header (`stage: shaped`, `model`, and
+4. **Write `plan.md`** from the template: header (`stage: shaped`, `model`,
+   `size` on the `craft:size` scale from the Map counts, and
    `branch`/`worktree` from git — HQ's current branch and directory),
    Goal from the ticket, numbered Decisions, Phases. Every phase gets a `Test:`
    line; mark `⏸` where the build must stop for the user.
-5. **Show** the Goal, Decisions, and phase names with their Test lines — not the
-   whole file. The user says go, or asks for changes.
+5. **Show** the size line, Goal, Decisions, and phase names with their Test
+   lines — not the whole file. The user says go, or asks for changes.
 
 ## Rules
 
