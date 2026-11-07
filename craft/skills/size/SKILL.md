@@ -42,13 +42,15 @@ Bump one size for each, at most two:
 
 ## Report
 
-Exactly four lines, each one terminal line. No lists, no paragraphs.
+A markdown table, not a code block, and nothing after it. The size is the
+header row; then exactly three rows. No lists or line breaks inside a cell.
 
 ```
-M ■■■□□  9 files · 3 layers
-where    routes/clips (4), server/clips (3), packages/db (2)
-driver   wider than it looks: ClipMeta type changes, 14 callers
-checks   2 · new column shows in clip list · migration runs clean
+| size   | M ■■■□□ · 9 files · 3 layers                            |
+|--------|---------------------------------------------------------|
+| where  | routes/clips (4), server/clips (3), packages/db (2)     |
+| driver | wider than it looks: ClipMeta type changes, 14 callers  |
+| checks | 2 · new column shows in clip list · migration runs clean |
 ```
 
 - Bar: XS `■□□□□`, S `■■□□□`, M `■■■□□`, L `■■■■□`, XL `■■■■■`.
@@ -59,5 +61,5 @@ checks   2 · new column shows in clip list · migration runs clean
 - `checks`: how many things the user must look at by hand, then each in a few
   words.
 
-A fifth line only when two readings of the task would size differently:
-`assumed  <reading>; <other reading> would be <size>`.
+A fourth row only when two readings of the task would size differently:
+`| assumed | <reading>; <other reading> would be <size> |`.
