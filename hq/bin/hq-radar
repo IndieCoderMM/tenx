@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Print every live hq agent: Herdr state, stage, phase progress, Resume line.
+
+Usage: hq-radar
+"""
+
+import json
+import pathlib
+import re
+import subprocess
+
+KINDS = ("builder-", "reviewer-", "scout-")
+
+
+def plan_for(cwd, name, slug):
+    out = subprocess.run(
+        ["git", "-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True, text=True,
+    )
+    if out.returncode != 0:
+        return ""
+    root = pathlib.Path.home() / ".tenx" / "flow" / pathlib.Path(out.stdout.strip()).parent.name
+    plans = sorted(root.glob(f"{slug}*/plan.md")) if len(name) == 32 else [root / slug / "plan.md"]
+    return plans[0].read_text() if plans and plans[0].exists() else ""
+
+
+def summary(text):
+    stage = re.search(r"^stage:\s*(.+)$", text, re.M)
+    phases = text.split("## Phases", 1)[-1].split("\n## ", 1)[0] if "## Phases" in text else ""
+    done = len(re.findall(r"^- \[x\]", phases, re.M | re.I))
+    total = done + len(re.findall(r"^- \[ \]", phases, re.M))
+    resume = text.split("## Resume", 1)[-1].strip().splitlines() if "## Resume" in text else []
+    return (
+        stage.group(1).split()[0] if stage else "-",
+        f"{done}/{total}" if total else "-",
+        resume[0][:70] if resume else "-",
+    )
+
+
+out = subprocess.run(["herdr", "agent", "list"], capture_output=True, text=True)
+agents = json.loads(out.stdout)["result"]["agents"] if out.returncode == 0 else []
+
+rows = []
+for a in agents:
+    name = a.get("name", "")
+    if not name.startswith(KINDS):
+        continue
+    slug = name.split("-", 1)[1]
+    rows.append((name, a.get("agent_status", "?"), *summary(plan_for(a.get("cwd", ""), name, slug))))
+
+if not rows:
+    print("no hq agents")
+else:
+    head = ("AGENT", "STATE", "STAGE", "TASKS", "RESUME")
+    widths = [max(len(str(r[i])) for r in [head, *rows]) for i in range(4)]
+    for r in [head, *rows]:
+        print("  ".join(str(c).ljust(w) for c, w in zip(r, widths)) + "  " + r[4])

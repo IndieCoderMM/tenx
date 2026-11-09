@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Start an hq agent in a Herdr pane beside HQ, send its first command, and wait
+# until it settles.
+#
+#   hq-probe builder  <slug> [--model M]
+#   hq-probe reviewer <slug>
+#   hq-probe scout    <slug> route|file "<question>"
+#
+# Run from HQ's pane, in the feature worktree (builder, reviewer) or any checkout
+# (scout). A route scout gets its own Herdr worktree workspace. HQ runs this in
+# the background: it returns when the agent is idle, done, or blocked.
+# Exit 3: the agent was blocked at startup (e.g. folder-trust dialog).
+set -euo pipefail
+
+die() { echo "hq-probe: $*" >&2; exit "${2:-1}"; }
+json() { python3 -I -c "import json,sys
+d=json.load(sys.stdin)
+for k in sys.argv[1].split('.'): d=d.get(k,{}) if isinstance(d,dict) else {}
+print(d if d!={} else '')" "$1"; }
+
+[ "${HERDR_ENV:-}" = 1 ] || die "not inside Herdr — start HQ in a Herdr pane"
+
+kind="${1:-}"; slug="${2:-}"
+[ -n "$kind" ] && [ -n "$slug" ] || die "usage: hq-probe builder|reviewer|scout <slug> ..."
+shift 2
+
+here="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not inside a git repo"
+main="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+repo="$(basename "$main")"
+dir="$HOME/.tenx/flow/$repo/$slug"
+mkdir -p "$dir"
+
+name="$kind-$slug"; name="${name:0:32}"
+claude_args=(--permission-mode auto)
+path="$here"
+
+case "$kind" in
+  builder)
+    [ -f "$dir/plan.md" ] || die "no plan.md at $dir — run /hq:chart first"
+    [ "$here" != "$main" ] || die "HQ is in the main checkout — start HQ in a feature worktree and probe from there"
+    if [ "${1:-}" = "--model" ]; then claude_args+=(--model "${2:?--model needs a value}"); fi
+    msg="/hq:builder $slug"
+    ;;
+  reviewer)
+    [ "$here" != "$main" ] || die "HQ is in the main checkout — run from the feature worktree"
+    msg="/hq:reviewer $slug"
+    ;;
+  scout)
+    mode="${1:-}"; question="${2:-}"
+    [ -n "$question" ] || die "usage: hq-probe scout <slug> route|file \"<question>\""
+    case "$mode" in
+      route) ;;
+      file) claude_args+=(--add-dir "$dir") ;;
+      *) die "scout mode must be route or file" ;;
+    esac
+    mkdir -p "$dir/proto"
+    printf '%s\n' "$question" > "$dir/proto/question.md"
+    msg="/hq:scout $slug $mode"
+    ;;
+  *) die "kind must be builder, reviewer, or scout" ;;
+esac
+
+herdr agent get "$name" >/dev/null 2>&1 && die "agent $name already exists"
+
+if [ "$kind" = scout ] && [ "$mode" = route ]; then
+  path="$(dirname "$main")/$repo-worktrees/scout-$slug"
+  pane="$(herdr worktree create --cwd "$main" --path "$path" --branch "$slug-scout" --no-focus | json result.root_pane.pane_id)"
+  herdr pane run "$pane" 'wt-setup; echo WT_SETUP_EXIT=$?' >/dev/null
+  herdr pane wait-output "$pane" --regex '^WT_SETUP_EXIT=\d+$' --timeout 600000 >/dev/null
+else
+  pane="$(herdr pane split --current --direction right --cwd "$path" --no-focus | json result.pane.pane_id)"
+fi
+[ -n "$pane" ] || die "Herdr returned no pane"
+
+if ! err="$(herdr agent start "$name" --kind claude --pane "$pane" --timeout 300000 -- "${claude_args[@]}" 2>&1 >/dev/null)"; then
+  [ "$(json error.code <<<"$err" 2>/dev/null)" = agent_not_ready ] &&
+    die "$name is blocked at startup — answer it in pane $pane (herdr agent focus $name)" 3
+  die "$err"
+fi
+
+echo "agent    $name"
+echo "pane     $pane"
+echo "path     $path"
+out="$(herdr agent prompt "$name" "$msg" --wait 2>&1)" || die "$out"
+echo "status   $(json result.agent.agent_status <<<"$out")"
