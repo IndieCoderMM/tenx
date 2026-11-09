@@ -47,6 +47,12 @@ plan edit. Commit when they say "commit".
 `fix N, M` (relayed from HQ): fix those `## Review` items, commit, then append
 `— fixed in <sha>` to each. Items the user skips get `— skipped (user)`.
 
+`my hunk notes` (alone or with `fix N, M`): read the user's notes from the open
+Hunk window (`references/plan.md`, Hunk notes). Append each to `## Review` as
+`uN. [you] \`path:line\` — <note>`, fix, commit, mark it like any item, and
+reply in Hunk: `hunk session comment add --repo <worktree> --reply-to <noteId>
+--summary "fixed in <sha>"`. No Hunk window open → say so and stop.
+
 ## Rules
 
 - Never push or open a PR — that is `/flow:ship`.

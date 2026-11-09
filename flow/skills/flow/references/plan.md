@@ -71,3 +71,20 @@ proto: <branch or file> — <one-line verdict, or —>
 ```
 
 Status is appended by the build session: `— fixed in <sha>` or `— skipped (user)`.
+
+## Hunk notes — `DIR/review.json`
+
+The review session also writes its findings as a Hunk sidecar, so the user sees
+them inline in the diff. Same numbers and text as `## Review`; paths are
+repo-relative; `newRange` is the finding's line (`oldRange` for a deleted line).
+
+```json
+{"version": 1, "files": [
+  {"path": "apps/web/src/file.ts", "annotations": [
+    {"id": "1", "newRange": [42, 42], "summary": "1. [high] <what is wrong> → <suggested fix>"}
+  ]}
+]}
+```
+
+User notes written in Hunk (`c`) live only in the open Hunk window. The build
+session reads them with `hunk session comment list --repo <worktree> --type user --json`.

@@ -24,7 +24,10 @@ Load the `flow` skill first. Read-only on code.
    something, and fixing all of it over-engineers the code. At most 8 items.
 5. **Write** `## Review` in `plan.md` in the format from `references/plan.md`,
    most severe first. Nothing found → `No findings — <what was checked>`.
-6. Colour green. Report the count and the top 3 in one line each.
+   Write the same findings to `DIR/review.json` (Hunk notes, same reference).
+6. Colour green. Report the count, the top 3 in one line each, and the command
+   to see them in the diff:
+   `hunk diff <merge-base sha> --watch --agent-notes --agent-context <DIR>/review.json`
 
 ## Rules
 

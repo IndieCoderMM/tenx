@@ -16,8 +16,10 @@ through one file per feature: `plan.md`.
 HQ    /flow:ideate  → (optional) /flow:spawn proto → ticket via dispatch:issue
 HQ    /flow:shape <ticket> → plan.md → user says go
 HQ    /flow:spawn build → work session runs /flow:build
-HQ    /flow:spawn review → work session runs /flow:review → user picks fixes
-HQ    relays "fix N, M" and "/flow:ship" to the build session with `aoe send`
+HQ    /flow:spawn review → work session runs /flow:review → user reads the
+      findings in Hunk, adds own notes there, picks fixes
+HQ    relays "fix N, M" / "my hunk notes" and "/flow:ship" to the build session
+      with `aoe send`
 HQ    /flow:board — status of every work session, any time
 ```
 
@@ -44,6 +46,7 @@ HQ    /flow:board — status of every work session, any time
 
 ```
 plan.md            # the feature's single source of truth
+review.json        # review findings as Hunk diff notes
 proto/             # prototype files, screenshots, verdict.md
 shots/             # build screenshots
 ```
