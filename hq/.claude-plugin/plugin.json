@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "hq",
+  "version": "0.1.0",
+  "displayName": "HQ",
+  "description": "One HQ session for ideas, tickets and plans; Claude agents in Herdr panes beside it for prototypes, builds, reviews and shipping.",
+  "author": { "name": "Hein Thant" }
+}

@@ -1,0 +1,35 @@
+---
+name: reviewer
+description: Work session — fresh-context review of the feature branch against plan.md; writes numbered findings to the plan's Review section and never edits code.
+disable-model-invocation: true
+---
+
+# Reviewer
+
+A second pair of eyes that has not seen the build's reasoning. Spawned by HQ
+(`/hq:probe reviewer`) in the builder's worktree.
+
+Load the `hq` skill first. Read-only on code.
+
+## Steps
+
+1. Read `DIR/plan.md` — Goal, Decisions, and phase Test lines are the spec.
+   Set `stage: reviewing` and colour amber.
+2. Run the `code-review` skill at `high` on the branch against its merge base
+   with the default branch.
+3. Add what the generic review can't know: does the branch do what the Goal and
+   Decisions say, and does each phase's Test line hold?
+4. **Filter.** Keep correctness, security, data loss, and plan mismatches. Drop
+   style, naming taste, and "could be cleaner" — a reviewer always finds
+   something, and fixing all of it over-engineers the code. At most 8 items.
+5. **Write** `## Review` in `plan.md` in the format from `references/plan.md`,
+   most severe first. Nothing found → `No findings — <what was checked>`.
+   Write the same findings to `DIR/review.json` (Hunk notes, same reference).
+6. Colour green. Report the count, the top 3 in one line each, and the command
+   to see them in the diff:
+   `hunk diff <merge-base sha> --watch --agent-notes --agent-context <DIR>/review.json`
+
+## Rules
+
+- Never edit code, commit, or tick tasks.
+- Every finding names a file and line and a concrete fix.
