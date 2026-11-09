@@ -33,7 +33,7 @@ def summary(text):
     return (
         stage.group(1).split()[0] if stage else "-",
         f"{done}/{total}" if total else "-",
-        resume[0][:70] if resume else "-",
+        resume[0] if resume else "-",
     )
 
 
@@ -51,7 +51,5 @@ for a in agents:
 if not rows:
     print("no hq agents")
 else:
-    head = ("AGENT", "STATE", "STAGE", "TASKS", "RESUME")
-    widths = [max(len(str(r[i])) for r in [head, *rows]) for i in range(4)]
-    for r in [head, *rows]:
-        print("  ".join(str(c).ljust(w) for c, w in zip(r, widths)) + "  " + r[4])
+    for name, state, stage, tasks, resume in rows:
+        print(f"{name} · {state}\n  stage {stage} · tasks {tasks}\n  resume {resume}\n")

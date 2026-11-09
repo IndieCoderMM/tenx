@@ -76,7 +76,7 @@ A background `hq-probe` or `herdr agent prompt --wait` returns when the agent
 settles on `idle`, `done`, or `blocked`. Then:
 
 1. Read that feature's `plan.md` (`Resume`, `## Review`, or `proto/verdict.md`).
-2. Report in at most 5 lines: what finished, what needs the user, and
+2. Report what finished, what needs the user, and
    `herdr agent focus <name>` when they should look themselves.
 3. If the agent is `blocked`, show the dialog from `herdr agent read <name>
    --lines 30`; answer it only after the user decides (`references/herdr.md`).

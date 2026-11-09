@@ -1,12 +1,13 @@
 ---
 name: radar
-description: HQ — one table of every live hq agent - Herdr state, stage, phase progress, and resume line.
+description: HQ — every live hq agent, one block each - Herdr state, stage, phase progress, and resume line.
 disable-model-invocation: true
 ---
 
 # Radar
 
-Run `hq-radar` and show its table as-is.
+Run `hq-radar` and show its output as-is, in a code block. Never turn it into a
+table: tables wrap badly in the terminal.
 
 Below it, list only what needs the user, one line each:
 

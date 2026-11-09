@@ -74,7 +74,7 @@ Folders without `plan.md` (flow v1 tasks) are ignored.
 `flow-wait` exits when a work session stops running. Then:
 
 1. Read that feature's `plan.md` (`Resume`, `## Review`, or `proto/verdict.md`).
-2. Report in at most 5 lines: what finished, what needs the user, and
+2. Report what finished, what needs the user, and
    `aoe session attach <title>` when they should look themselves.
 3. If the session is `waiting` on a question, show the question; relay the
    user's answer with `aoe send`.
