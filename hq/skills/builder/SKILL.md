@@ -27,6 +27,7 @@ Load the `hq` skill and `craft:principles` first.
    look at it.
 3. **Commit** with `dispatch:commit`. Tick the tasks.
 4. **Resume:** overwrite the `## Resume` line — `phase N done · next: <phase> · —`.
+   After the last phase, write the "All phases done" line below instead.
 5. **Continue** to the next phase without asking, unless this phase is `⏸`.
 
 ## Stop when
@@ -45,7 +46,9 @@ When the user attaches and asks for tweaks, do them directly — no phase, no
 plan edit. Commit when they say "commit".
 
 `fix N, M` (relayed from HQ): fix those `## Review` items, commit, then append
-`— fixed in <sha>` to each. Items the user skips get `— skipped (user)`.
+`— fixed in <sha>` to each. Items the user skips get `— skipped (user)`. Then
+overwrite Resume: `review items done · next: launch · —`, or
+`fixed N, M · next: items <left> · —` while unmarked items remain.
 
 `my hunk notes` (alone or with `fix N, M`): read the user's notes from the open
 Hunk window (`references/plan.md`, Hunk notes). Append each to `## Review` as
