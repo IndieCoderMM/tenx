@@ -23,11 +23,11 @@ Load the `hq` skill first.
 4. **PR.** `dispatch:pr`. Its how-to-test comes from the phases' Test lines.
 5. **Ticket.** Link the PR on the ticket and move it to the team's review state
    if it has one.
-6. **Close.** `stage: shipped`, Resume `shipped · <pr url>`, colour green.
+6. **Close.** `stage: shipped`, Resume `shipped · <pr url>`.
 
 ## Rules
 
 - Never mention `plan.md` or hq in the PR or ticket.
 - A failing check blocks the push — fix it in `/hq:builder` or ask.
 
-Next: after merge, `aoe remove builder-<slug>` and `aoe remove reviewer-<slug>`
+Next: after merge, `herdr pane close <pane>` for `builder-<slug>` and `reviewer-<slug>` (pane from `herdr agent get <name>`).

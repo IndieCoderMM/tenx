@@ -17,7 +17,7 @@ Arguments: `<slug> route|file`. The question is in `DIR/proto/question.md`.
 
 1. **Pick the shape** from the question:
    - "What should this look like?" → **variants**: 3 variants by default (max 5),
-     structurally different — layout, hierarchy, main action — not colour swaps.
+     structurally different — layout, hierarchy, main action — not palette swaps.
    - "Does this logic / state flow hold up?" → **walkthrough**: a pure reducer or
      state machine in one script block, a live state panel, a button per action,
      and one tab per scenario (happy path, awkward edge, something that should be
@@ -26,10 +26,10 @@ Arguments: `<slug> route|file`. The question is in `DIR/proto/question.md`.
 3. **Screenshot** each variant or scenario with agent-browser into `DIR/proto/`
    (load the `agent-browser` skill; run `agent-browser skills get core` first).
    Look at every shot yourself before handing over — fix anything broken.
-4. **Hand over.** Colour red, then report: the URL or file path, the variant keys,
+4. **Hand over.** Report: the URL or file path, the variant keys,
    one line per variant on how it differs. The user flips through and replies,
    often "header from B, list from C". Iterate until they pick.
-5. **Verdict.** Write `DIR/proto/verdict.md`, then colour green:
+5. **Verdict.** Write `DIR/proto/verdict.md`:
 
    ```markdown
    question: <the question>
@@ -41,7 +41,7 @@ Arguments: `<slug> route|file`. The question is in `DIR/proto/question.md`.
 ## Mode: file
 
 One self-contained HTML file at `DIR/proto/<slug>.html`: inline CSS and JS, no
-build, opens by double-click. Copy the project's theme tokens (colours, radius,
+build, opens by double-click. Copy the project's theme tokens (palette, radius,
 font, spacing) from its global CSS so it looks like the product. Variants switch
 with `?v=A|B|C`, a floating bottom bar with ←/→ arrows, and the arrow keys. Open
 it with `xdg-open`. Publish it as a private Artifact only if the user asks to share.

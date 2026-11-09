@@ -13,7 +13,7 @@ Load the `hq` skill and `craft:principles` first.
 
 ## Start
 
-1. Read `DIR/plan.md`. Set `stage: building` and colour amber.
+1. Read `DIR/plan.md`. Set `stage: building`.
 2. If `proto:` names a branch, read its diff; port the parts the verdict kept,
    rewritten to production standard. Never merge the proto branch.
 3. Start at the first phase with unticked tasks.
@@ -31,12 +31,12 @@ Load the `hq` skill and `craft:principles` first.
 
 ## Stop when
 
-- **⏸ phase done:** colour red. Report the Test line and the screenshot path so
+- **⏸ phase done:** report the Test line and the screenshot path so
   the user can check.
 - **Blocked** — a decision the plan does not cover, a failing check you can't fix
   in two tries, or anything outside the plan's scope: write
-  `Resume: blocked · <one-line question>`, colour red, stop.
-- **All phases done:** colour green, Resume `all phases done · next: reviewer`.
+  `Resume: blocked · <one-line question>`, stop.
+- **All phases done:** Resume `all phases done · next: reviewer`.
   Report what was built in at most 6 lines.
 
 ## Direct requests

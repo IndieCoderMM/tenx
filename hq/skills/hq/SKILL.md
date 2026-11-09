@@ -6,9 +6,10 @@ description: Core rules for the hq workflow — HQ session plus Claude agents in
 # HQ
 
 One **HQ** session per feature talks with the user and orchestrates. It runs in
-the feature's worktree, which the user creates as usual. **Work sessions** run in
-aoe (tmux) in that same worktree and do the hands-on work. They share state
-through one file per feature: `plan.md`.
+a Herdr pane in the feature's worktree, which the user creates as usual. **Work
+sessions** are Claude agents in Herdr panes beside HQ, in that same worktree,
+and do the hands-on work. They share state through one file per feature:
+`plan.md`.
 
 ## The loop
 
@@ -19,18 +20,18 @@ HQ    /hq:probe builder → work session runs /hq:builder
 HQ    /hq:probe reviewer → work session runs /hq:reviewer → user reads the
       findings in Hunk, adds own notes there, picks fixes
 HQ    relays "fix N, M" / "my hunk notes" and "/hq:launch" to the builder
-      with `aoe send`
+      with `herdr agent prompt --wait`
 HQ    /hq:radar — status of every work session, any time
 ```
 
 ## Roles
 
-| Session | aoe title | Directory | Writes |
+| Session | Agent name | Pane | Writes |
 |---|---|---|---|
 | HQ | (any) | the feature worktree | `plan.md` (all but the sections below), tickets |
-| builder | `builder-<slug>` | HQ's worktree | code, commits, phase ticks, `Resume`, `stage` |
-| reviewer | `reviewer-<slug>` | HQ's worktree | `## Review` only — never code |
-| scout | `scout-<slug>` | own worktree `<repo>-worktrees/scout-<slug>` (route) or HQ's directory (file) | prototype, `proto/verdict.md` |
+| builder | `builder-<slug>` | beside HQ, HQ's worktree | code, commits, phase ticks, `Resume`, `stage` |
+| reviewer | `reviewer-<slug>` | beside HQ, HQ's worktree | `## Review` only — never code |
+| scout | `scout-<slug>` | own worktree workspace `<repo>-worktrees/scout-<slug>` (route) or beside HQ (file) | prototype, `proto/verdict.md` |
 
 - HQ never edits project files or runs git writes, even though it shares the
   worktree. It reads code through an Explore subagent so file dumps stay out of
@@ -52,8 +53,8 @@ shots/             # build screenshots
 ```
 
 Template and writer rules: `references/plan.md`. **Read it before writing plan.md.**
-aoe commands and helper scripts: `references/aoe.md`. **Read it before spawning,
-relaying, or waiting.**
+Herdr commands and helper scripts: `references/herdr.md`. **Read it before
+probing, relaying, or answering an agent.**
 
 These files are local only. Never commit them or mention them in a PR or ticket.
 
@@ -62,7 +63,7 @@ These files are local only. Never commit them or mention them in a PR or ticket.
 Slugs are kebab-case, prefixed with the ticket id once one exists (`cc-301-bulk-export`).
 When omitted:
 
-1. In a work session: the aoe title (`builder-<slug>`), else the worktree folder name.
+1. In a work session: the agent name (`builder-<slug>`), else the worktree folder name.
 2. In HQ: the most recently modified `DIR` folder containing `plan.md` whose
    `stage` is not `shipped`.
 3. Otherwise list the candidates and ask.
@@ -71,13 +72,14 @@ Folders without `plan.md` (flow v1 tasks) are ignored.
 
 ## When a background wait returns (HQ)
 
-`flow-wait` exits when a work session stops running. Then:
+A background `hq-probe` or `herdr agent prompt --wait` returns when the agent
+settles on `idle`, `done`, or `blocked`. Then:
 
 1. Read that feature's `plan.md` (`Resume`, `## Review`, or `proto/verdict.md`).
 2. Report in at most 5 lines: what finished, what needs the user, and
-   `aoe session attach <title>` when they should look themselves.
-3. If the session is `waiting` on a question, show the question; relay the
-   user's answer with `aoe send`.
+   `herdr agent focus <name>` when they should look themselves.
+3. If the agent is `blocked`, show the dialog from `herdr agent read <name>
+   --lines 30`; answer it only after the user decides (`references/herdr.md`).
 
 ## Reports
 

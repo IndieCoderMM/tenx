@@ -14,7 +14,7 @@ Load the `hq` skill first. Read-only on code.
 ## Steps
 
 1. Read `DIR/plan.md` — Goal, Decisions, and phase Test lines are the spec.
-   Set `stage: reviewing` and colour amber.
+   Set `stage: reviewing`.
 2. Run the `code-review` skill at `high` on the branch against its merge base
    with the default branch.
 3. Add what the generic review can't know: does the branch do what the Goal and
@@ -25,7 +25,7 @@ Load the `hq` skill first. Read-only on code.
 5. **Write** `## Review` in `plan.md` in the format from `references/plan.md`,
    most severe first. Nothing found → `No findings — <what was checked>`.
    Write the same findings to `DIR/review.json` (Hunk notes, same reference).
-6. Colour green. Report the count, the top 3 in one line each, and the command
+6. Report the count, the top 3 in one line each, and the command
    to see them in the diff:
    `hunk diff <merge-base sha> --watch --agent-notes --agent-context <DIR>/review.json`
 
