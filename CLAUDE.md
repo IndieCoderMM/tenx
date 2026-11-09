@@ -67,7 +67,7 @@ A fork of flow (v2) that runs HQ and its work sessions as Claude agents in Herdr
 | `proto`, `build`, `review`, `ship` | `scout`, `builder`, `reviewer`, `launch` |
 | aoe titles `proto-`/`build-`/`review-<slug>` | Herdr agent names `scout-`/`builder-`/`reviewer-<slug>`, capped at 32 chars |
 | `flow-spawn`, `flow-board` | `hq-probe`, `hq-radar` |
-| — | `land` + `hq-land`: after merge, removes panes, worktrees, branches, and HQ's workspace |
+| — | `land` + `hq-land`: after merge, closes work-session panes and removes the scout worktree; HQ stays |
 
 Differences from flow:
 

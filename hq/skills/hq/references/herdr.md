@@ -71,8 +71,7 @@ hq-land <slug>
 ```
 
 Run by `/hq:land` from HQ's pane after the PR merges. Refuses unless the PR is
-merged at local HEAD and the worktree is clean. Closes the `builder-`,
-`reviewer-`, and `scout-<slug>` panes, removes the scout worktree and deletes
-its branch, writes `landed · <date> · <pr url>` to Resume, then removes the
-feature worktree and branch and closes HQ's workspace — ending HQ. `plan.md`
-stays for retro.
+merged. Closes the `builder-`, `reviewer-`, and `scout-<slug>` panes, removes
+the scout worktree and deletes its branch, and writes `landed · <date> · <pr url>`
+to Resume. HQ, the feature worktree, its branch, and the workspace stay; the
+user removes them the usual way.

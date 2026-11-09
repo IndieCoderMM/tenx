@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# Remove what a merged hq feature left behind, HQ itself last.
+# Remove what a merged hq feature's work sessions left behind.
 #
 #   hq-land <slug>
 #
 # Run from HQ's pane in the feature worktree. Refuses unless the branch's PR is
-# merged at exactly this HEAD and the worktree is clean. Closes the builder,
-# reviewer, and scout panes; removes the scout worktree and branch; marks
-# plan.md landed; then removes the feature worktree and branch and closes HQ's
-# Herdr workspace, which ends this session. plan.md stays for retro.
+# merged. Closes the builder, reviewer, and scout panes; removes the scout
+# worktree and branch; marks plan.md landed. HQ, its worktree, branch, and
+# workspace stay — the user removes those.
 set -euo pipefail
 
 die() { echo "hq-land: $*" >&2; exit 1; }
@@ -25,13 +24,10 @@ repo="$(basename "$main")"
 dir="$HOME/.tenx/flow/$repo/$slug"
 branch="$(git branch --show-current)"
 [ "$here" != "$main" ] || die "HQ is in the main checkout — run from the feature worktree"
-[ -z "$(git status --porcelain)" ] || die "uncommitted changes in $here"
 
-pr="$(gh pr view "$branch" --json state,headRefOid,url 2>/dev/null)" || die "no PR for $branch"
+pr="$(gh pr view "$branch" --json state,url 2>/dev/null)" || die "no PR for $branch"
 url="$(json url <<<"$pr")"
 [ "$(json state <<<"$pr")" = MERGED ] || die "PR not merged: $url"
-[ "$(json headRefOid <<<"$pr")" = "$(git rev-parse HEAD)" ] ||
-  die "local $branch differs from the merged PR head: $url"
 
 for kind in builder reviewer scout; do
   name="$kind-$slug"; name="${name:0:32}"
@@ -61,8 +57,4 @@ EOF
   echo "marked   $dir/plan.md landed"
 fi
 
-echo "removing $here, branch $branch, and this workspace — HQ ends here"
-cd "$main"
-git worktree remove "$here"
-git branch -D "$branch" >/dev/null
-herdr workspace close "$HERDR_WORKSPACE_ID" >/dev/null
+echo "kept     HQ, $here, branch $branch"

@@ -21,7 +21,7 @@ HQ    /hq:probe reviewer → work session runs /hq:reviewer → user reads the
       findings in Hunk, adds own notes there, picks fixes
 HQ    relays "fix N, M" / "my hunk notes" and "/hq:launch" to the builder
       with `herdr agent prompt --wait`
-HQ    /hq:land after the PR merges — closes panes, removes worktrees, ends HQ
+HQ    /hq:land after the PR merges — closes work-session panes, removes the scout
 HQ    /hq:radar — status of every work session, any time
 ```
 
