@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Tenx is a collection of Claude Code plugins (skills) for the agentic development lifecycle (ADLC), curated from the author's workflow. Each top-level directory containing `.claude-plugin/plugin.json` is one plugin. Currently: `flow` (HQ + aoe work sessions, idea to PR), `adlc` (approval-gated feature lifecycle), `craft` (how code and prose get written and verified), `dispatch` (what gets published for others to read), `retro` (weekly review of the workflow itself), and `tutor` (learning technical topics in depth).
+Tenx is a collection of Claude Code plugins (skills) for the agentic development lifecycle (ADLC), curated from the author's workflow. Each top-level directory containing `.claude-plugin/plugin.json` is one plugin. Currently: `flow` (HQ + aoe work sessions, idea to PR), `hq` (the same workflow on Herdr panes), `adlc` (approval-gated feature lifecycle), `craft` (how code and prose get written and verified), `dispatch` (what gets published for others to read), `retro` (weekly review of the workflow itself), and `tutor` (learning technical topics in depth).
 
 ## Commands
 
@@ -56,6 +56,24 @@ Design rules to preserve when editing flow:
 - **One code writer per worktree.** Review and HQ never edit code. Parallelism is across features only.
 - **HQ stays light**: it reads code only through Explore subagents and learns about work sessions from `plan.md` and `flow-wait`, never by polling.
 - **aoe mechanics live in `bin/`** (`flow-spawn`, `flow-wait`, `flow-board`), not in skill prose. `CLAUDE_PLUGIN_ROOT` is not exported to Bash, so skills call them by bare name. aoe names a new worktree's directory after the session title, and `-P <parent>` overrides `-g`; derive the repo from git, never from the aoe group.
+
+## The hq plugin
+
+A fork of flow (v2) that runs HQ and its work sessions as Claude agents in Herdr panes instead of aoe sessions, so HQ and the builder sit side by side. Same `DIR`, same `plan.md` format, same single-writer rules; flow stays untouched until hq ships a real feature.
+
+| flow | hq |
+|---|---|
+| `ideate`, `shape`, `spawn`, `board` | `comms`, `chart`, `probe`, `radar` |
+| `proto`, `build`, `review`, `ship` | `scout`, `builder`, `reviewer`, `launch` |
+| aoe titles `proto-`/`build-`/`review-<slug>` | Herdr agent names `scout-`/`builder-`/`reviewer-<slug>`, capped at 32 chars |
+| `flow-spawn`, `flow-board` | `hq-probe`, `hq-radar` |
+
+Differences from flow:
+
+- Scripts refuse to run without `HERDR_ENV=1`. Herdr only controls its own session from inside it.
+- `hq-probe` splits a pane beside HQ (a route scout gets its own Herdr worktree workspace), starts Claude with `herdr agent start`, and waits with `agent prompt --wait`. That one background call replaces both `aoe send` and `flow-wait`.
+- A blocked agent rejects prompts. HQ shows `agent read` to the user and answers with `send-keys` only after the user decides.
+- No session colours. Herdr's sidebar already shows working, done, and blocked.
 
 ## The ADLC plugin
 
