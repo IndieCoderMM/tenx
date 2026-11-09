@@ -64,9 +64,15 @@ herdr agent read <name> --lines 30
 herdr agent focus <name>          # bring the agent's pane forward for the user
 ```
 
-## Clean up
+## Clean up — `hq-land`
 
-After the PR merges: `herdr pane close <pane>` for the builder and reviewer panes
-(pane IDs from `herdr agent get <name>`). The feature worktree is HQ's, removed
-the usual way. A route scout's workspace: `herdr worktree remove --workspace <id>`
-deletes the worktree and keeps the `<slug>-scout` branch.
+```bash
+hq-land <slug>
+```
+
+Run by `/hq:land` from HQ's pane after the PR merges. Refuses unless the PR is
+merged at local HEAD and the worktree is clean. Closes the `builder-`,
+`reviewer-`, and `scout-<slug>` panes, removes the scout worktree and deletes
+its branch, writes `landed · <date> · <pr url>` to Resume, then removes the
+feature worktree and branch and closes HQ's workspace — ending HQ. `plan.md`
+stays for retro.

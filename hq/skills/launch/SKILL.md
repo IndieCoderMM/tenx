@@ -30,4 +30,4 @@ Load the `hq` skill first.
 - Never mention `plan.md` or hq in the PR or ticket.
 - A failing check blocks the push — fix it in `/hq:builder` or ask.
 
-Next: after merge, `herdr pane close <pane>` for `builder-<slug>` and `reviewer-<slug>` (pane from `herdr agent get <name>`).
+Next: after the PR merges, /hq:land <slug> in HQ
